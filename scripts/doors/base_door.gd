@@ -79,7 +79,7 @@ func _build_visuals() -> void:
 	_glow_light.light_color = door_color
 	_glow_light.light_energy = 3.2
 	_glow_light.omni_range = 8.5
-	_glow_light.shadow_enabled = true
+	_glow_light.shadow_enabled = false
 	_glow_light.position = Vector3(0.0, 1.35, 0.35)
 	add_child(_glow_light)
 

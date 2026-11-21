@@ -246,3 +246,10 @@ func _refresh_closest_interactable() -> void:
 
 func get_current_target() -> Node:
 	return _current_target
+
+
+func _exit_tree() -> void:
+	if GameState.touch_jump_pressed.is_connected(_queue_jump):
+		GameState.touch_jump_pressed.disconnect(_queue_jump)
+	if GameState.touch_interact_pressed.is_connected(_try_interact):
+		GameState.touch_interact_pressed.disconnect(_try_interact)

@@ -342,31 +342,46 @@ func _create_bridge_body(p_a: Vector3, p_b: Vector3, width: float, is_magic: boo
 	var mid := (p_a + p_b) * 0.5
 	var diff := p_b - p_a
 	var length := maxf(diff.length(), 0.5)
-	body.position = mid
+	# Slight +0.035 Y lift eliminates ALL Z-fighting/flicker where bridges meet island tops
+	body.position = mid + Vector3(0.0, 0.035, 0.0)
 	body.rotation.y = atan2(diff.x, diff.z)
 
 	var mat := LowPolyMeshLibrary.make_flat_material(
 		Color(0.32, 0.72, 0.96) if is_magic else Color(0.42, 0.25, 0.20),
-		0.65,
+		0.68,
 		Color(0.26, 0.76, 1.0) if is_magic else Color.BLACK,
-		0.75 if is_magic else 0.0
+		0.70 if is_magic else 0.0
 	)
-	var planks := clampi(int(round(length * 2.2)), 3, 18)
+	var rail_mat := LowPolyMeshLibrary.make_flat_material(
+		Color(0.48, 0.84, 1.0) if is_magic else Color(0.30, 0.17, 0.15), 0.75
+	)
+	var usable_len := maxf(length - 0.18, 0.4)
+	var planks := clampi(int(round(usable_len * 2.1)), 3, 16)
 	for i in range(planks):
 		var t := (float(i) + 0.5) / float(planks) - 0.5
 		var plank := MeshInstance3D.new()
 		var box := BoxMesh.new()
-		box.size = Vector3(width, 0.14, (length / float(planks)) * 0.82)
+		box.size = Vector3(width, 0.12, (usable_len / float(planks)) * 0.80)
 		plank.mesh = box
-		plank.position = Vector3(0.0, -0.07, t * length)
+		plank.position = Vector3(0.0, -0.06, t * usable_len)
 		plank.material_override = mat
 		body.add_child(plank)
 
+	# Side stringer rails for clean low-poly look matching reference art
+	for side_x in [-width * 0.47, width * 0.47]:
+		var rail := MeshInstance3D.new()
+		var rbox := BoxMesh.new()
+		rbox.size = Vector3(0.11, 0.16, usable_len)
+		rail.mesh = rbox
+		rail.position = Vector3(side_x, 0.02, 0.0)
+		rail.material_override = rail_mat
+		body.add_child(rail)
+
 	var col := CollisionShape3D.new()
 	var cbox := BoxShape3D.new()
-	cbox.size = Vector3(width, 0.24, length)
+	cbox.size = Vector3(width, 0.24, length + 0.2)
 	col.shape = cbox
-	col.position = Vector3(0.0, -0.12, 0.0)
+	col.position = Vector3(0.0, -0.14, 0.0)
 	body.add_child(col)
 	return body
 
@@ -546,19 +561,30 @@ func _spawn_3d_starfield(count: int) -> void:
 	var sph := SphereMesh.new()
 	sph.radius = 0.16
 	sph.height = 0.32
-	sph.radial_segments = 5
-	sph.rings = 3
+	sph.radial_segments = 4
+	sph.rings = 2
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = sph
+	mm.instance_count = count
 	for i in range(count):
-		var m := MeshInstance3D.new()
-		m.mesh = sph
-		m.material_override = star_mat
 		var dist := rng.randf_range(30.0, 62.0)
 		var theta := rng.randf_range(0.0, TAU)
 		var phi := rng.randf_range(-0.20, 0.92)
-		m.position = Vector3(cos(theta) * cos(phi) * dist, sin(phi) * dist + 2.0, sin(theta) * cos(phi) * dist)
+		var pos := Vector3(cos(theta) * cos(phi) * dist, sin(phi) * dist + 2.0, sin(theta) * cos(phi) * dist)
 		var sc := rng.randf_range(0.5, 1.45)
-		m.scale = Vector3(sc, sc, sc)
-		_world_root.add_child(m)
+		mm.set_instance_transform(i, Transform3D(Basis.from_scale(Vector3(sc, sc, sc)), pos))
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = mm
+	mmi.material_override = star_mat
+	_world_root.add_child(mmi)
+
+
+func _exit_tree() -> void:
+	if MonetizationBridge.ad_reward_granted.is_connected(_on_ad_reward_granted):
+		MonetizationBridge.ad_reward_granted.disconnect(_on_ad_reward_granted)
+	if MonetizationBridge.ad_unavailable.is_connected(_on_ad_unavailable):
+		MonetizationBridge.ad_unavailable.disconnect(_on_ad_unavailable)
 
 
 static func _to_vec3(v: Variant) -> Vector3:

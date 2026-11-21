@@ -30,18 +30,21 @@ func _build_visuals() -> void:
 
 	# Translucent cyan column outline
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.24, 0.84, 1.0, 0.16)
+	mat.albedo_color = Color(0.28, 0.86, 1.0, 0.09)
 	mat.emission_enabled = true
-	mat.emission = Color(0.24, 0.84, 1.0)
-	mat.emission_energy_multiplier = 0.9
+	mat.emission = Color(0.28, 0.86, 1.0)
+	mat.emission_energy_multiplier = 0.65
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 
 	var col := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = zone_size
-	col.mesh = box
-	col.position = Vector3(0.0, zone_size.y * 0.5, 0.0)
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = minf(zone_size.x, zone_size.z) * 0.44
+	cyl.bottom_radius = minf(zone_size.x, zone_size.z) * 0.44
+	cyl.height = zone_size.y
+	cyl.radial_segments = 16
+	col.mesh = cyl
+	col.position = Vector3(0.0, zone_size.y * 0.5 + 0.04, 0.0)
 	col.material_override = mat
 	_field_visual.add_child(col)
 

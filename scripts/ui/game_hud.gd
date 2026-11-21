@@ -742,3 +742,12 @@ func _refresh_counters() -> void:
 	var cbtn := _root.find_child("CrystalBtn", true, false) as Button
 	if cbtn != null:
 		cbtn.text = " %d / 30" % SaveManager.get_collected_secret_count()
+
+
+func _exit_tree() -> void:
+	if LocalizationManager.language_changed.is_connected(_on_language_changed):
+		LocalizationManager.language_changed.disconnect(_on_language_changed)
+	if SaveManager.progress_updated.is_connected(_refresh_counters):
+		SaveManager.progress_updated.disconnect(_refresh_counters)
+	if MonetizationBridge.banner_visibility_changed.is_connected(_on_banner_visibility_changed):
+		MonetizationBridge.banner_visibility_changed.disconnect(_on_banner_visibility_changed)

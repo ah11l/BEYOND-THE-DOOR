@@ -1,6 +1,6 @@
 extends Node
 
-## Central game session coordinator, scene router, and mobile input bridge.
+## Central game session coordinator, safe deferred scene router, and mobile input bridge.
 
 signal touch_move_changed(vec: Vector2)
 signal touch_jump_pressed
@@ -16,6 +16,7 @@ const SCENE_ENDING := "res://scenes/ui/ending_screen.tscn"
 var current_stage_id: int = 1
 var active_ending_id: String = ""
 var touch_move_vector: Vector2 = Vector2.ZERO
+var _scene_changing: bool = false
 
 
 func _ready() -> void:
@@ -32,40 +33,45 @@ func apply_graphics_quality() -> void:
 	var vp := get_viewport()
 	if vp != null:
 		match quality:
-			"low":
-				vp.msaa_3d = Viewport.MSAA_DISABLED
 			"high":
-				vp.msaa_3d = Viewport.MSAA_4X
-			_:
 				vp.msaa_3d = Viewport.MSAA_2X
+			_:
+				# Keep MSAA disabled on Low/Medium for rock-solid Android GLES3 stability & FPS
+				vp.msaa_3d = Viewport.MSAA_DISABLED
 	graphics_quality_changed.emit(quality)
+
+
+func _safe_change_scene(path: String) -> void:
+	if _scene_changing:
+		return
+	_scene_changing = true
+	touch_move_vector = Vector2.ZERO
+	get_tree().paused = false
+	call_deferred("_do_change_scene", path)
+
+
+func _do_change_scene(path: String) -> void:
+	var err := get_tree().change_scene_to_file(path)
+	_scene_changing = false
+	if err != OK:
+		push_error("GameState: Failed to load scene %s (error %d)" % [path, err])
 
 
 func start_stage(stage_id: int) -> void:
 	current_stage_id = clampi(stage_id, 1, 30)
 	SaveManager.set_last_played_stage(current_stage_id)
-	get_tree().paused = false
-	var err := get_tree().change_scene_to_file(SCENE_STAGE)
-	if err != OK:
-		push_error("GameState: Failed to load stage scene (error %d)" % err)
+	_safe_change_scene(SCENE_STAGE)
 
 
 func go_to_main_menu() -> void:
-	get_tree().paused = false
-	touch_move_vector = Vector2.ZERO
-	var err := get_tree().change_scene_to_file(SCENE_MAIN_MENU)
-	if err != OK:
-		push_error("GameState: Failed to load main menu (error %d)" % err)
+	_safe_change_scene(SCENE_MAIN_MENU)
 
 
 func trigger_ending(ending_id: String) -> void:
 	active_ending_id = ending_id
 	SaveManager.unlock_ending(ending_id)
 	SaveManager.mark_stage_completed(30)
-	get_tree().paused = false
-	var err := get_tree().change_scene_to_file(SCENE_ENDING)
-	if err != OK:
-		push_error("GameState: Failed to load ending screen (error %d)" % err)
+	_safe_change_scene(SCENE_ENDING)
 
 
 func is_secret_ending_unlocked() -> bool:

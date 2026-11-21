@@ -134,3 +134,8 @@ func reset_echo() -> void:
 	_replay_elapsed = 0.0
 	state = EchoState.IDLE
 	state_changed.emit(state, 0.0)
+
+
+func _exit_tree() -> void:
+	if GameState.touch_echo_pressed.is_connected(toggle_echo_action):
+		GameState.touch_echo_pressed.disconnect(toggle_echo_action)
