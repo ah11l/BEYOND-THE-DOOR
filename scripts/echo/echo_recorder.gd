@@ -2,8 +2,8 @@ class_name EchoRecorder
 extends Node
 
 ## Signature "Echo / صدى المكان" mechanic:
-## Records up to 5.0 seconds of player movement at fixed physics ticks and replays
-## them via a glowing cyan ghost that can hold pressure plates while the player moves elsewhere.
+## Records up to 5.0 seconds (7.0s with Crystal Power) of player movement at fixed physics ticks
+## and replays them via a glowing cyan ghost that respects recorded world_side & room_state.
 
 enum EchoState { IDLE, RECORDING, REPLAYING }
 
@@ -112,7 +112,7 @@ func _spawn_ghost() -> void:
 	_active_ghost = GHOST_SCENE.instantiate() as EchoGhost
 	ghost_parent.add_child(_active_ghost)
 	_active_ghost.replay_finished.connect(_on_ghost_finished)
-	_active_ghost.start_replay(_recorded_frames)
+	_active_ghost.start_replay(_recorded_frames, player)
 
 
 func _on_ghost_finished() -> void:

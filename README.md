@@ -21,5 +21,5 @@ Developed by **majnon.studio (مجنون استديو)** — an atmospheric, off
 
 ## Building Android APK & Google Play AAB
 
-- **GitHub Actions CI (`.github/workflows/main.yml` / `android.yml`):** Uses `barichello/godot-ci:4.5.2` to export `builds/beyond_the_door_debug.apk` automatically on every push.
+- **GitHub Actions CI (`.github/workflows/main.yml`):** Uses `barichello/godot-ci:4.5.2` to export `builds/beyond_the_door_debug.apk` automatically on every push.
 - **Google Play Release AAB:** Configured in `export_presets.cfg` (`[preset.1]` — `"Android Google Play AAB"`). Requires configuring your release keystore (`keystore/release`, `keystore/release_user`, `keystore/release_password`) and enabling Gradle Build with the Poing Studios AdMob addon before Play Console submission.

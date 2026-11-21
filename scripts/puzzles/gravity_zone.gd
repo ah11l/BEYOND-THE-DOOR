@@ -2,7 +2,7 @@ class_name GravityZone
 extends Node3D
 
 ## Controlled local gravity field toggled by a BlueDoor.
-## When active, lifts or reduces gravity smoothly inside its volume with visual chevrons.
+## Registers and unregisters by zone_id on PlayerController so overlapping zones blend cleanly.
 
 @export var zone_id: String = "grav_1"
 @export var zone_size: Vector3 = Vector3(3.4, 5.5, 3.4)
@@ -79,9 +79,9 @@ func set_zone_active(active: bool) -> void:
 	_refresh_visuals()
 	if _player_inside != null and is_instance_valid(_player_inside):
 		if is_active:
-			_player_inside.set_gravity_zone(gravity_scale, upward_lift)
+			_player_inside.enter_gravity_zone(zone_id, gravity_scale, upward_lift)
 		else:
-			_player_inside.reset_gravity_zone()
+			_player_inside.exit_gravity_zone(zone_id)
 
 
 func _refresh_visuals() -> void:
@@ -102,10 +102,10 @@ func _on_body_entered(body: Node) -> void:
 	if body is PlayerController:
 		_player_inside = body as PlayerController
 		if is_active:
-			_player_inside.set_gravity_zone(gravity_scale, upward_lift)
+			_player_inside.enter_gravity_zone(zone_id, gravity_scale, upward_lift)
 
 
 func _on_body_exited(body: Node) -> void:
 	if body == _player_inside:
-		_player_inside.reset_gravity_zone()
+		_player_inside.exit_gravity_zone(zone_id)
 		_player_inside = null

@@ -1,9 +1,9 @@
 class_name StageBuilder
 extends Node3D
 
-## Runtime 3D stage builder & gameplay controller for all 30 stages across 6 worlds.
+## Runtime 3D stage builder & gameplay controller for all 120 stages across 6 worlds.
 ## Instantiates floating low-poly islands, bridges, props, doors, Echo recorder,
-## puzzle devices, checkpoints, memory secrets, and Stage 30 ending pedestals.
+## puzzle devices, checkpoints, memory secrets, and Stage 120 ending pedestals.
 
 const PLAYER_SCENE := preload("res://scenes/player/player.tscn")
 const HUD_SCENE := preload("res://scenes/ui/game_hud.tscn")
@@ -52,9 +52,8 @@ func _ready() -> void:
 	_apply_room_state(0)
 	_evaluate_door_conditions()
 
-	# Show stage clue/intro hint toast if present
+	# Show World Chapter Story Card on the first stage of each world, else intro hint toast
 	var intro_hint := str(stage_def.get("hint_key", ""))
-	# Show World Chapter Story Card on the first stage of each world
 	var world_starts := {1: "world_1_story", 21: "world_2_story", 41: "world_3_story", 61: "world_4_story", 81: "world_5_story", 101: "world_6_story"}
 	if world_starts.has(stage_id):
 		_hud.show_story_chapter(int(stage_def.get("world", 1)), str(world_starts[stage_id]))
@@ -91,7 +90,6 @@ func _setup_environment() -> void:
 	moon.directional_shadow_max_distance = 48.0
 	add_child(moon)
 
-	# Warm rose-pink atmospheric fill light from bottom-left (matches reference mood)
 	var rose_fill := DirectionalLight3D.new()
 	rose_fill.light_color = Color(0.95, 0.48, 0.62)
 	rose_fill.light_energy = 0.42
@@ -99,7 +97,6 @@ func _setup_environment() -> void:
 	rose_fill.shadow_enabled = false
 	add_child(rose_fill)
 
-	# Cool sky-blue rim light from top-right (matches reference mood)
 	var blue_rim := DirectionalLight3D.new()
 	blue_rim.light_color = Color(0.32, 0.76, 1.0)
 	blue_rim.light_energy = 0.48
@@ -107,7 +104,6 @@ func _setup_environment() -> void:
 	blue_rim.shadow_enabled = false
 	add_child(blue_rim)
 	_spawn_3d_starfield(110)
-	
 
 
 func _build_stage_geometry() -> void:
@@ -188,7 +184,7 @@ func _build_stage_geometry() -> void:
 		deco.position = Vector3(cos(angle) * dist, rng.randf_range(-5.5, 2.5), sin(angle) * dist)
 		_world_root.add_child(deco)
 
-	# 4. Props (trees, benches, lanterns, crystals, rocks)
+	# 4. Props (trees, benches, lanterns, crystals, rocks, arches, spires, monoliths)
 	for prop in stage_def.get("props", []):
 		var kind := str(prop["type"])
 		var p_pos := _to_vec3(prop["pos"])
@@ -204,18 +200,6 @@ func _build_stage_geometry() -> void:
 				node = LowPolyMeshLibrary.create_crystal_cluster(Color(0.28, 0.86, 1.0))
 			"rock":
 				node = LowPolyMeshLibrary.create_rock(side_col.lightened(0.15), float(prop.get("scale", 1.0)))
-			"arch":
-				node = LowPolyMeshLibrary.create_scenic_arch(side_col.lightened(0.22), accent_col)
-			"spire":
-				node = LowPolyMeshLibrary.create_crystal_spire(accent_col)
-			"monolith", "shrine":
-				node = LowPolyMeshLibrary.create_floating_monolith(side_col.lightened(0.18), accent_col)
-			"arch":
-				node = LowPolyMeshLibrary.create_scenic_arch(side_col.lightened(0.22), accent_col)
-			"spire":
-				node = LowPolyMeshLibrary.create_crystal_spire(accent_col)
-			"monolith", "shrine":
-				node = LowPolyMeshLibrary.create_floating_monolith(side_col.lightened(0.18), accent_col)
 			"arch":
 				node = LowPolyMeshLibrary.create_scenic_arch(side_col.lightened(0.22), accent_col)
 			"spire":
@@ -339,7 +323,7 @@ func _build_stage_geometry() -> void:
 				kd.world_transfer_requested.connect(_on_black_door_transfer)
 				_world_root.add_child(kd)
 
-	# 13. Stage 30 Ending Pedestals
+	# 13. Stage 120 Ending Pedestals
 	for ep in stage_def.get("endings", []):
 		var ped := EndingPedestal.new()
 		ped.ending_id = str(ep["id"])
@@ -382,7 +366,6 @@ func _create_bridge_body(p_a: Vector3, p_b: Vector3, width: float, is_magic: boo
 		plank.material_override = mat
 		body.add_child(plank)
 
-	# Side stringer rails for clean low-poly look matching reference art
 	for side_x in [-width * 0.47, width * 0.47]:
 		var rail := MeshInstance3D.new()
 		var rbox := BoxMesh.new()
@@ -490,7 +473,10 @@ func _apply_room_state(state_idx: int) -> void:
 
 func _set_body_active(node: Node3D, body: CollisionObject3D, active: bool) -> void:
 	if node != null and is_instance_valid(node):
-		node.visible = active
+		if node.has_method("set_state_active"):
+			node.call("set_state_active", active)
+		else:
+			node.visible = active
 	if body != null and is_instance_valid(body):
 		body.collision_layer = 1 if active else 0
 
@@ -519,10 +505,6 @@ func _on_secret_collected(_secret_id: String, lore_key: String) -> void:
 		_hud.show_toast("power_insight_unlocked", 6.5)
 	elif total == GameState.POWER_ECHO_CRYSTALS:
 		_hud.show_toast("power_echo_unlocked", 6.5)
-	elif total == GameState.POWER_STRIDE_CRYSTALS:
-		_hud.show_toast("power_stride_unlocked", 6.5)
-	elif total == GameState.POWER_STRIDE_CRYSTALS:
-		_hud.show_toast("power_stride_unlocked", 6.5)
 	elif total == GameState.POWER_STRIDE_CRYSTALS:
 		_hud.show_toast("power_stride_unlocked", 6.5)
 	elif total == GameState.SECRET_ENDING_REQUIRED_SECRETS:
@@ -564,7 +546,6 @@ func _on_stage_completed(door: GoldenDoor) -> void:
 		walk_tw.tween_property(_player, "global_position", door.global_position, 0.95).set_trans(Tween.TRANS_SINE)
 	if _camera_rig != null:
 		_camera_rig.play_door_zoom_in(door.global_position, 1.15)
-	# Smooth golden-light cinematic fade into the next stage automatically (zero popup button!)
 	var fade_layer := CanvasLayer.new()
 	fade_layer.layer = 50
 	add_child(fade_layer)
@@ -631,7 +612,7 @@ func _on_ad_reward_granted(placement: String) -> void:
 		if hint_k.is_empty():
 			hint_k = str(stage_def.get("objective_key", "ad_hint_granted"))
 		_hud.show_toast(hint_k, 7.0)
-	elif placement == "skip_stage" and stage_id < 30:
+	elif placement == "skip_stage" and stage_id < GameState.TOTAL_STAGES:
 		SaveManager.mark_stage_completed(stage_id)
 		_hud.show_toast("ad_skip_granted", 2.0)
 		GameState.start_stage(stage_id + 1)
@@ -670,29 +651,3 @@ func _build_energy_conduits() -> void:
 			beam.rotation.y = atan2(diff.x, diff.z)
 			beam.material_override = wire_mat
 			_world_root.add_child(beam)
-
-
-func _spawn_ambient_motes(count: int) -> void:
-	## Single-draw-call floating golden/cyan stardust motes for rich living atmosphere.
-	var rng := RandomNumberGenerator.new()
-	rng.seed = stage_id * 97 + 5
-	var mat := StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.albedo_color = Color(1.0, 0.88, 0.56)
-	var sph := SphereMesh.new()
-	sph.radius = 0.055
-	sph.height = 0.11
-	sph.radial_segments = 4
-	sph.rings = 2
-	var mm := MultiMesh.new()
-	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.mesh = sph
-	mm.instance_count = count
-	for i in range(count):
-		var pos := Vector3(rng.randf_range(-10.0, 14.0), rng.randf_range(0.5, 6.0), rng.randf_range(-9.0, 9.0))
-		var sc := rng.randf_range(0.6, 1.4)
-		mm.set_instance_transform(i, Transform3D(Basis.from_scale(Vector3(sc, sc, sc)), pos))
-	var mmi := MultiMeshInstance3D.new()
-	mmi.multimesh = mm
-	mmi.material_override = mat
-	_world_root.add_child(mmi)

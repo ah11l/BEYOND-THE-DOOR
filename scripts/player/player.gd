@@ -2,7 +2,7 @@ class_name PlayerController
 extends CharacterBody3D
 
 ## Responsive hooded protagonist controller with smooth analog isometric movement,
-## coyote time, jump buffering, subtle movement lean, gravity zone support, and Echo integration.
+## coyote time, jump buffering, subtle movement lean, multi-zone gravity support, and Echo integration.
 
 signal interaction_target_changed(target: Node)
 signal interacted(target: Node)
@@ -34,6 +34,7 @@ var _bob_time: float = 0.0
 var _camera_ref: Camera3D = null
 var _coyote_timer: float = 0.0
 var _jump_buffer_timer: float = 0.0
+var _active_gravity_zones: Dictionary = {} # zone_id -> {"scale": float, "lift": float}
 
 
 func _ready() -> void:
@@ -59,14 +60,38 @@ func set_camera_reference(cam: Camera3D) -> void:
 	_camera_ref = cam
 
 
+func enter_gravity_zone(zone_id: String, scale_val: float, lift_val: float) -> void:
+	_active_gravity_zones[zone_id] = {"scale": scale_val, "lift": lift_val}
+	_recompute_gravity_zone()
+
+
+func exit_gravity_zone(zone_id: String) -> void:
+	_active_gravity_zones.erase(zone_id)
+	_recompute_gravity_zone()
+
+
 func set_gravity_zone(scale_val: float, lift_val: float) -> void:
-	gravity_scale = scale_val
-	upward_lift = lift_val
+	enter_gravity_zone("_direct", scale_val, lift_val)
 
 
 func reset_gravity_zone() -> void:
-	gravity_scale = 1.0
-	upward_lift = 0.0
+	_active_gravity_zones.clear()
+	_recompute_gravity_zone()
+
+
+func _recompute_gravity_zone() -> void:
+	if _active_gravity_zones.is_empty():
+		gravity_scale = 1.0
+		upward_lift = 0.0
+		return
+	var best_scale := 1.0
+	var best_lift := 0.0
+	for zdata in _active_gravity_zones.values():
+		var d := zdata as Dictionary
+		best_scale = minf(best_scale, float(d.get("scale", 1.0)))
+		best_lift = maxf(best_lift, float(d.get("lift", 0.0)))
+	gravity_scale = best_scale
+	upward_lift = best_lift
 
 
 func _queue_jump() -> void:
