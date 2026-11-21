@@ -57,29 +57,20 @@ func _ready() -> void:
 	# Show World Chapter Story Card on the first stage of each world
 	var world_starts := {1: "world_1_story", 21: "world_2_story", 41: "world_3_story", 61: "world_4_story", 81: "world_5_story", 101: "world_6_story"}
 	if world_starts.has(stage_id):
-		_hud.show_toast(str(world_starts[stage_id]), 7.5)
+		_hud.show_story_chapter(int(stage_def.get("world", 1)), str(world_starts[stage_id]))
 	elif not intro_hint.is_empty():
 		_hud.show_toast(intro_hint, 5.5)
 
 
 func _setup_environment() -> void:
 	var env := Environment.new()
-	env.background_mode = Environment.BG_SKY
-	var sky := Sky.new()
-	var sky_mat := ShaderMaterial.new()
-	var sh := load("res://assets/shaders/starry_night_sky.gdshader")
-	if sh != null:
-		sky_mat.shader = sh
-		sky_mat.set_shader_parameter("top_color", world_palette["sky_top"])
-		sky_mat.set_shader_parameter("horizon_color", world_palette["sky_horizon"])
-		sky_mat.set_shader_parameter("bottom_color", world_palette["sky_bottom"])
-	sky.sky_material = sky_mat
-	env.sky = sky
+	env.background_mode = Environment.BG_COLOR
+	env.background_color = (world_palette["sky_top"] as Color).lerp(Color(0.03, 0.04, 0.12), 0.55)
 
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = (world_palette["light"] as Color).darkened(0.45)
 	env.ambient_light_energy = 0.88
-	env.fog_enabled = true
+	env.fog_enabled = false
 	env.fog_light_color = world_palette["fog"] as Color
 	env.fog_density = 0.003
 	env.fog_sky_affect = 0.0
@@ -116,11 +107,7 @@ func _setup_environment() -> void:
 	blue_rim.shadow_enabled = false
 	add_child(blue_rim)
 	_spawn_3d_starfield(110)
-	_spawn_ambient_motes(64)
-	var halo := LowPolyMeshLibrary.create_celestial_ring(26.0, world_palette["accent"] as Color)
-	halo.position = Vector3(2.0, 5.5, -18.0)
-	halo.rotation_degrees = Vector3(68.0, 22.0, 12.0)
-	_world_root.add_child(halo)
+	
 
 
 func _build_stage_geometry() -> void:
@@ -217,6 +204,12 @@ func _build_stage_geometry() -> void:
 				node = LowPolyMeshLibrary.create_crystal_cluster(Color(0.28, 0.86, 1.0))
 			"rock":
 				node = LowPolyMeshLibrary.create_rock(side_col.lightened(0.15), float(prop.get("scale", 1.0)))
+			"arch":
+				node = LowPolyMeshLibrary.create_scenic_arch(side_col.lightened(0.22), accent_col)
+			"spire":
+				node = LowPolyMeshLibrary.create_crystal_spire(accent_col)
+			"monolith", "shrine":
+				node = LowPolyMeshLibrary.create_floating_monolith(side_col.lightened(0.18), accent_col)
 			"arch":
 				node = LowPolyMeshLibrary.create_scenic_arch(side_col.lightened(0.22), accent_col)
 			"spire":
@@ -377,7 +370,7 @@ func _create_bridge_body(p_a: Vector3, p_b: Vector3, width: float, is_magic: boo
 	var rail_mat := LowPolyMeshLibrary.make_flat_material(
 		Color(0.48, 0.84, 1.0) if is_magic else Color(0.30, 0.17, 0.15), 0.75
 	)
-	var usable_len := maxf(length - 0.18, 0.4)
+	var usable_len := maxf(length + 0.55, 0.8)
 	var planks := clampi(int(round(usable_len * 2.1)), 3, 16)
 	for i in range(planks):
 		var t := (float(i) + 0.5) / float(planks) - 0.5
@@ -401,7 +394,7 @@ func _create_bridge_body(p_a: Vector3, p_b: Vector3, width: float, is_magic: boo
 
 	var col := CollisionShape3D.new()
 	var cbox := BoxShape3D.new()
-	cbox.size = Vector3(width, 0.24, length + 0.2)
+	cbox.size = Vector3(width + 0.2, 0.28, usable_len + 0.3)
 	col.shape = cbox
 	col.position = Vector3(0.0, -0.14, 0.0)
 	body.add_child(col)
@@ -530,6 +523,8 @@ func _on_secret_collected(_secret_id: String, lore_key: String) -> void:
 		_hud.show_toast("power_stride_unlocked", 6.5)
 	elif total == GameState.POWER_STRIDE_CRYSTALS:
 		_hud.show_toast("power_stride_unlocked", 6.5)
+	elif total == GameState.POWER_STRIDE_CRYSTALS:
+		_hud.show_toast("power_stride_unlocked", 6.5)
 	elif total == GameState.SECRET_ENDING_REQUIRED_SECRETS:
 		_hud.show_toast("power_secret_unlocked", 6.5)
 	else:
@@ -593,8 +588,8 @@ func _spawn_3d_starfield(count: int) -> void:
 	star_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	star_mat.albedo_color = Color(0.92, 0.96, 1.0)
 	var sph := SphereMesh.new()
-	sph.radius = 0.16
-	sph.height = 0.32
+	sph.radius = 0.09
+	sph.height = 0.18
 	sph.radial_segments = 4
 	sph.rings = 2
 	var mm := MultiMesh.new()
@@ -602,7 +597,7 @@ func _spawn_3d_starfield(count: int) -> void:
 	mm.mesh = sph
 	mm.instance_count = count
 	for i in range(count):
-		var dist := rng.randf_range(30.0, 62.0)
+		var dist := rng.randf_range(46.0, 78.0)
 		var theta := rng.randf_range(0.0, TAU)
 		var phi := rng.randf_range(-0.20, 0.92)
 		var pos := Vector3(cos(theta) * cos(phi) * dist, sin(phi) * dist + 2.0, sin(theta) * cos(phi) * dist)

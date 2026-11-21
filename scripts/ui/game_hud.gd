@@ -177,25 +177,11 @@ func _build_hud() -> void:
 	pause_btn.pressed.connect(toggle_pause)
 	top_hbox.add_child(pause_btn)
 
-	var help_btn := Button.new()
-	help_btn.set_meta("loc_key", "btn_help_short")
-	UIStyleHelper.style_button(help_btn, UIStyleHelper.ACCENT_CYAN, 14, 16)
-	help_btn.custom_minimum_size = Vector2(74, 52)
-	help_btn.pressed.connect(open_tutorial)
-	top_hbox.add_child(help_btn)
-
-	var map_btn := Button.new()
-	map_btn.set_meta("loc_key", "btn_stages_short")
-	UIStyleHelper.style_button(map_btn, UIStyleHelper.BORDER_SUBTLE, 14, 16)
-	map_btn.custom_minimum_size = Vector2(84, 52)
-	map_btn.pressed.connect(_open_stage_select)
-	top_hbox.add_child(map_btn)
-
 	var reset_btn := Button.new()
 	reset_btn.text = ""
 	UIStyleHelper.style_button(reset_btn, UIStyleHelper.BORDER_SUBTLE, 14, 20)
-	UIStyleHelper.apply_icon(reset_btn, "res://assets/icons/icon_reset.svg", 26)
-	reset_btn.custom_minimum_size = Vector2(52, 52)
+	UIStyleHelper.apply_icon(reset_btn, "res://assets/icons/icon_reset.svg", 24)
+	reset_btn.custom_minimum_size = Vector2(50, 50)
 	reset_btn.pressed.connect(func() -> void: restart_checkpoint_requested.emit())
 	top_hbox.add_child(reset_btn)
 
@@ -229,20 +215,7 @@ func _build_hud() -> void:
 	spacer_r.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top_hbox.add_child(spacer_r)
 
-	# Right group: Hint + Skip + Key Pill + Crystal Counter (clickable for Codex)
-	var hint_btn := Button.new()
-	hint_btn.set_meta("loc_key", "btn_hint_short")
-	UIStyleHelper.style_button(hint_btn, UIStyleHelper.ACCENT_GOLD, 14, 16)
-	hint_btn.custom_minimum_size = Vector2(74, 52)
-	hint_btn.pressed.connect(func() -> void: hint_ad_requested.emit())
-	top_hbox.add_child(hint_btn)
-
-	_skip_btn = Button.new()
-	_skip_btn.set_meta("loc_key", "btn_skip_short")
-	UIStyleHelper.style_button(_skip_btn, UIStyleHelper.ACCENT_CYAN, 14, 16)
-	_skip_btn.custom_minimum_size = Vector2(74, 52)
-	_skip_btn.pressed.connect(func() -> void: skip_stage_ad_requested.emit())
-	top_hbox.add_child(_skip_btn)
+	# Clean minimal right group: Key Pill + Crystal Counter only (Hint/Skip inside Pause Menu)
 
 	_key_pill = PanelContainer.new()
 	_key_pill.visible = false
@@ -452,6 +425,9 @@ func _build_pause_overlay() -> void:
 
 	var buttons := [
 		{"name": "BtnResume", "key": "menu_resume", "cb": func() -> void: toggle_pause()},
+		{"name": "BtnStages", "key": "menu_stage_select", "cb": func() -> void: _pause_overlay.visible = false; _open_stage_select()},
+		{"name": "BtnHint", "key": "hud_hint", "cb": func() -> void: toggle_pause(); hint_ad_requested.emit()},
+		{"name": "BtnSkip", "key": "hud_skip", "cb": func() -> void: toggle_pause(); skip_stage_ad_requested.emit()},
 		{"name": "BtnHowTo", "key": "menu_how_to_play", "cb": func() -> void: open_tutorial()},
 		{"name": "BtnRestart", "key": "menu_restart_cp", "cb": func() -> void: toggle_pause(); restart_checkpoint_requested.emit()},
 		{"name": "BtnSettings", "key": "menu_settings", "cb": func() -> void: _pause_overlay.visible = false; _settings_overlay.visible = true},
@@ -755,3 +731,50 @@ func _exit_tree() -> void:
 		SaveManager.progress_updated.disconnect(_refresh_counters)
 	if MonetizationBridge.banner_visibility_changed.is_connected(_on_banner_visibility_changed):
 		MonetizationBridge.banner_visibility_changed.disconnect(_on_banner_visibility_changed)
+
+
+func show_story_chapter(world_idx: int, story_key: String) -> void:
+	var overlay := ColorRect.new()
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.color = Color(0.03, 0.04, 0.11, 0.90)
+	_root.add_child(overlay)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.add_child(center)
+
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(680, 0)
+	panel.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style(Color(0.08, 0.09, 0.22, 0.96), UIStyleHelper.ACCENT_GOLD, 22, 2))
+	center.add_child(panel)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 18)
+	panel.add_child(vbox)
+
+	var chapter_lbl := Label.new()
+	chapter_lbl.text = "%s %d — %s" % [LocalizationManager.t("world_label"), world_idx, LocalizationManager.t("world_%d_name" % world_idx)]
+	chapter_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	chapter_lbl.add_theme_font_size_override("font_size", 28)
+	chapter_lbl.add_theme_color_override("font_color", UIStyleHelper.ACCENT_GOLD)
+	vbox.add_child(chapter_lbl)
+
+	var body_lbl := Label.new()
+	body_lbl.text = LocalizationManager.t(story_key)
+	body_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	body_lbl.add_theme_font_size_override("font_size", 20)
+	body_lbl.add_theme_color_override("font_color", UIStyleHelper.TEXT_PRIMARY)
+	vbox.add_child(body_lbl)
+
+	var cont_btn := Button.new()
+	cont_btn.text = "متابعة ✦" if LocalizationManager.is_rtl() else "Continue ✦"
+	cont_btn.custom_minimum_size = Vector2(220, 52)
+	UIStyleHelper.style_button(cont_btn, UIStyleHelper.ACCENT_GOLD, 20, 19)
+	cont_btn.pressed.connect(func() -> void:
+		AudioManager.play_sfx("ui_click")
+		overlay.queue_free()
+		get_tree().paused = false
+	)
+	vbox.add_child(cont_btn)
+	get_tree().paused = true
