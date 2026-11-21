@@ -1,9 +1,11 @@
 class_name GameHUD
 extends CanvasLayer
 
-## Mobile-first in-game HUD matching the visual reference layout:
-## Pause, left shortcut rail, crystal/key counters, virtual joystick, contextual Echo/Clue pill,
-## dedicated Echo & Jump/Interact touch buttons, and modal Pause / Settings / Stage Select / Codex overlays.
+## Ergonomic mobile-first HUD for wide Android screens (16:9 to 21:9):
+## - Thumb-zone joystick and Echo/Jump buttons pulled comfortably inward from screen edges
+## - Clean top bar with Pause, Help/Tutorial, Stages, Memories, Reset, Hint, Skip, and Counters
+## - Interactive Arabic/English Tutorial overlay shown automatically on Stage 1
+## - Zero unsupported emojis (all crisp Arabic/English labels and Noto-supported symbols)
 
 signal restart_checkpoint_requested
 signal next_stage_requested
@@ -12,21 +14,23 @@ signal skip_stage_ad_requested
 
 var _root: Control
 var _top_margin: MarginContainer
-var _skip_btn: Button
 var _stage_title_label: Label
 var _objective_label: Label
 var _secret_count_label: Label
+var _key_pill: PanelContainer
 var _key_count_label: Label
 var _toast_panel: PanelContainer
 var _toast_label: Label
 var _interact_btn: Button
 var _echo_btn: Button
 var _jump_btn: Button
+var _skip_btn: Button
 var _pause_overlay: Control
 var _settings_overlay: Control
 var _stage_select_overlay: Control
 var _codex_overlay: Control
 var _stage_clear_overlay: Control
+var _tutorial_overlay: Control
 var _stage_clear_title: Label
 var _toast_timer: float = 0.0
 
@@ -63,16 +67,27 @@ func set_stage_info(stage_id: int, title_key: String, objective_key: String) -> 
 	_refresh_labels()
 	if _skip_btn != null:
 		_skip_btn.visible = (stage_id < 30)
+	# Auto-open Arabic/English interactive tutorial on Stage 1 if not seen yet
+	if stage_id == 1 and not bool(SaveManager.get_setting("tutorial_seen", false)):
+		open_tutorial()
+
+
+func open_tutorial() -> void:
+	if _tutorial_overlay == null:
+		return
+	_pause_overlay.visible = false
+	_tutorial_overlay.visible = true
+	get_tree().paused = true
 
 
 func update_key_counter(held: int, required: int) -> void:
-	if _key_count_label == null:
+	if _key_pill == null or _key_count_label == null:
 		return
 	if required > 0:
-		_key_count_label.visible = true
-		_key_count_label.text = "🔑 %d / %d" % [held, required]
+		_key_pill.visible = true
+		_key_count_label.text = "%s: %d / %d" % [LocalizationManager.t("keys_label"), held, required]
 	else:
-		_key_count_label.visible = false
+		_key_pill.visible = false
 
 
 func update_echo_state(echo_state: int, progress: float) -> void:
@@ -82,13 +97,13 @@ func update_echo_state(echo_state: int, progress: float) -> void:
 		EchoRecorder.EchoState.RECORDING:
 			var secs := EchoRecorder.MAX_RECORD_SECONDS * (1.0 - progress)
 			_echo_btn.text = "%s\n%.1fs" % [LocalizationManager.t("hud_echo_rec"), secs]
-			UIStyleHelper.style_circle_button(_echo_btn, 92, Color(1.0, 0.38, 0.45), 16)
+			UIStyleHelper.style_circle_button(_echo_btn, 100, Color(1.0, 0.38, 0.45), 17)
 		EchoRecorder.EchoState.REPLAYING:
 			_echo_btn.text = "%s\n%d%%" % [LocalizationManager.t("hud_echo_play"), int(progress * 100.0)]
-			UIStyleHelper.style_circle_button(_echo_btn, 92, UIStyleHelper.ACCENT_CYAN, 16)
+			UIStyleHelper.style_circle_button(_echo_btn, 100, UIStyleHelper.ACCENT_CYAN, 17)
 		_:
 			_echo_btn.text = LocalizationManager.t("hud_echo")
-			UIStyleHelper.style_circle_button(_echo_btn, 92, UIStyleHelper.ACCENT_CYAN, 18)
+			UIStyleHelper.style_circle_button(_echo_btn, 100, UIStyleHelper.ACCENT_CYAN, 19)
 
 
 func set_interaction_prompt(prompt_key: String) -> void:
@@ -118,7 +133,7 @@ func show_stage_complete(stage_id: int) -> void:
 
 
 func toggle_pause() -> void:
-	if _stage_clear_overlay != null and _stage_clear_overlay.visible:
+	if (_stage_clear_overlay != null and _stage_clear_overlay.visible) or (_tutorial_overlay != null and _tutorial_overlay.visible):
 		return
 	var next_paused := not get_tree().paused
 	get_tree().paused = next_paused
@@ -128,32 +143,61 @@ func toggle_pause() -> void:
 	_codex_overlay.visible = false
 
 
+func _on_banner_visibility_changed(is_visible: bool) -> void:
+	if _top_margin != null:
+		_top_margin.add_theme_constant_override("margin_top", 66 if is_visible else 18)
+
+
 func _build_hud() -> void:
 	_root = Control.new()
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_root)
 
-	# Top bar (safe margins for Android notches/rounded corners)
+	# Top bar with generous side margins for Android rounded corners / camera cutouts
 	_top_margin = MarginContainer.new()
-	var top_margin := _top_margin
-	top_margin.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	top_margin.add_theme_constant_override("margin_left", 24)
-	top_margin.add_theme_constant_override("margin_right", 24)
-	top_margin.add_theme_constant_override("margin_top", 18)
-	top_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_root.add_child(top_margin)
+	_top_margin.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_top_margin.add_theme_constant_override("margin_left", 44)
+	_top_margin.add_theme_constant_override("margin_right", 44)
+	_top_margin.add_theme_constant_override("margin_top", 18)
+	_top_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(_top_margin)
 
 	var top_hbox := HBoxContainer.new()
+	top_hbox.add_theme_constant_override("separation", 10)
 	top_hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	top_margin.add_child(top_hbox)
+	_top_margin.add_child(top_hbox)
 
+	# Left group: Pause + Help + Stages + Reset
 	var pause_btn := Button.new()
-	pause_btn.text = "❚❚"
-	UIStyleHelper.style_button(pause_btn, UIStyleHelper.BORDER_SUBTLE, 14, 22)
-	pause_btn.custom_minimum_size = Vector2(56, 56)
+	pause_btn.text = ""
+	UIStyleHelper.style_button(pause_btn, UIStyleHelper.BORDER_SUBTLE, 14, 20)
+	UIStyleHelper.apply_icon(pause_btn, "res://assets/icons/icon_pause.svg", 26)
+	pause_btn.custom_minimum_size = Vector2(54, 52)
 	pause_btn.pressed.connect(toggle_pause)
 	top_hbox.add_child(pause_btn)
+
+	var help_btn := Button.new()
+	help_btn.set_meta("loc_key", "btn_help_short")
+	UIStyleHelper.style_button(help_btn, UIStyleHelper.ACCENT_CYAN, 14, 16)
+	help_btn.custom_minimum_size = Vector2(74, 52)
+	help_btn.pressed.connect(open_tutorial)
+	top_hbox.add_child(help_btn)
+
+	var map_btn := Button.new()
+	map_btn.set_meta("loc_key", "btn_stages_short")
+	UIStyleHelper.style_button(map_btn, UIStyleHelper.BORDER_SUBTLE, 14, 16)
+	map_btn.custom_minimum_size = Vector2(84, 52)
+	map_btn.pressed.connect(_open_stage_select)
+	top_hbox.add_child(map_btn)
+
+	var reset_btn := Button.new()
+	reset_btn.text = ""
+	UIStyleHelper.style_button(reset_btn, UIStyleHelper.BORDER_SUBTLE, 14, 20)
+	UIStyleHelper.apply_icon(reset_btn, "res://assets/icons/icon_reset.svg", 26)
+	reset_btn.custom_minimum_size = Vector2(52, 52)
+	reset_btn.pressed.connect(func() -> void: restart_checkpoint_requested.emit())
+	top_hbox.add_child(reset_btn)
 
 	# Center stage header pill
 	var spacer_l := Control.new()
@@ -185,82 +229,58 @@ func _build_hud() -> void:
 	spacer_r.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top_hbox.add_child(spacer_r)
 
-	# Right counters (Memory Crystals + Keys)
-	var counters := HBoxContainer.new()
-	counters.add_theme_constant_override("separation", 10)
-	top_hbox.add_child(counters)
-
-	var key_pill := PanelContainer.new()
-	key_pill.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style(UIStyleHelper.BG_PANEL, UIStyleHelper.ACCENT_GOLD, 16, 1))
-	counters.add_child(key_pill)
-	_key_count_label = Label.new()
-	_key_count_label.visible = false
-	_key_count_label.add_theme_font_size_override("font_size", 18)
-	_key_count_label.add_theme_color_override("font_color", UIStyleHelper.ACCENT_GOLD)
-	key_pill.add_child(_key_count_label)
-
-	var crystal_pill := PanelContainer.new()
-	crystal_pill.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style(UIStyleHelper.BG_PANEL, UIStyleHelper.ACCENT_CYAN, 16, 1))
-	counters.add_child(crystal_pill)
-	_secret_count_label = Label.new()
-	_secret_count_label.add_theme_font_size_override("font_size", 18)
-	_secret_count_label.add_theme_color_override("font_color", UIStyleHelper.TEXT_PRIMARY)
-	crystal_pill.add_child(_secret_count_label)
-
-	# Left quick-action rail matching visual reference
-	var left_rail := VBoxContainer.new()
-	left_rail.position = Vector2(24, 150)
-	left_rail.add_theme_constant_override("separation", 12)
-	_root.add_child(left_rail)
-
-	var map_btn := Button.new()
-	map_btn.text = "🗺"
-	UIStyleHelper.style_button(map_btn, UIStyleHelper.BORDER_SUBTLE, 14, 22)
-	map_btn.custom_minimum_size = Vector2(54, 54)
-	map_btn.pressed.connect(_open_stage_select)
-	left_rail.add_child(map_btn)
-
-	var codex_btn := Button.new()
-	codex_btn.text = "◆"
-	UIStyleHelper.style_button(codex_btn, UIStyleHelper.ACCENT_CYAN, 14, 22)
-	codex_btn.custom_minimum_size = Vector2(54, 54)
-	codex_btn.pressed.connect(_open_codex)
-	left_rail.add_child(codex_btn)
-
-	var reset_btn := Button.new()
-	reset_btn.text = "↺"
-	UIStyleHelper.style_button(reset_btn, UIStyleHelper.BORDER_SUBTLE, 14, 24)
-	reset_btn.custom_minimum_size = Vector2(54, 54)
-	reset_btn.pressed.connect(func() -> void: restart_checkpoint_requested.emit())
-	left_rail.add_child(reset_btn)
-
+	# Right group: Hint + Skip + Key Pill + Crystal Counter (clickable for Codex)
 	var hint_btn := Button.new()
-	hint_btn.text = "💡"
-	hint_btn.tooltip_text = LocalizationManager.t("hud_hint")
-	UIStyleHelper.style_button(hint_btn, UIStyleHelper.ACCENT_GOLD, 14, 22)
-	hint_btn.custom_minimum_size = Vector2(54, 54)
+	hint_btn.set_meta("loc_key", "btn_hint_short")
+	UIStyleHelper.style_button(hint_btn, UIStyleHelper.ACCENT_GOLD, 14, 16)
+	hint_btn.custom_minimum_size = Vector2(74, 52)
 	hint_btn.pressed.connect(func() -> void: hint_ad_requested.emit())
-	left_rail.add_child(hint_btn)
+	top_hbox.add_child(hint_btn)
 
 	_skip_btn = Button.new()
-	_skip_btn.text = "⏭"
-	_skip_btn.tooltip_text = LocalizationManager.t("hud_skip")
-	UIStyleHelper.style_button(_skip_btn, UIStyleHelper.ACCENT_CYAN, 14, 22)
-	_skip_btn.custom_minimum_size = Vector2(54, 54)
+	_skip_btn.set_meta("loc_key", "btn_skip_short")
+	UIStyleHelper.style_button(_skip_btn, UIStyleHelper.ACCENT_CYAN, 14, 16)
+	_skip_btn.custom_minimum_size = Vector2(74, 52)
 	_skip_btn.pressed.connect(func() -> void: skip_stage_ad_requested.emit())
-	left_rail.add_child(_skip_btn)
+	top_hbox.add_child(_skip_btn)
 
-	# Bottom-left Touch Joystick
+	_key_pill = PanelContainer.new()
+	_key_pill.visible = false
+	_key_pill.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style(UIStyleHelper.BG_PANEL, UIStyleHelper.ACCENT_GOLD, 14, 1))
+	top_hbox.add_child(_key_pill)
+	_key_count_label = Label.new()
+	_key_count_label.add_theme_font_size_override("font_size", 16)
+	_key_count_label.add_theme_color_override("font_color", UIStyleHelper.ACCENT_GOLD)
+	_key_pill.add_child(_key_count_label)
+
+	var crystal_btn := Button.new()
+	crystal_btn.name = "CrystalBtn"
+	UIStyleHelper.style_button(crystal_btn, UIStyleHelper.ACCENT_CYAN, 16, 18)
+	UIStyleHelper.apply_icon(crystal_btn, "res://assets/icons/icon_crystal.svg", 26)
+	crystal_btn.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	crystal_btn.custom_minimum_size = Vector2(96, 52)
+	crystal_btn.pressed.connect(_open_codex)
+	top_hbox.add_child(crystal_btn)
+	_secret_count_label = null
+
+	# Bottom controls container (ALWAYS LTR so left thumb = joystick, right thumb = Echo + Jump)
+	var controls_layer := Control.new()
+	controls_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	controls_layer.layout_direction = Control.LAYOUT_DIRECTION_LTR
+	controls_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(controls_layer)
+
+	# Ergonomic Left-Thumb Joystick (pulled comfortably inward from corner)
 	var joystick := TouchJoystick.new()
 	joystick.anchor_left = 0.0
 	joystick.anchor_top = 1.0
 	joystick.anchor_right = 0.0
 	joystick.anchor_bottom = 1.0
-	joystick.offset_left = 28
-	joystick.offset_top = -186
-	joystick.offset_right = 184
-	joystick.offset_bottom = -30
-	_root.add_child(joystick)
+	joystick.offset_left = 104
+	joystick.offset_top = -236
+	joystick.offset_right = 276
+	joystick.offset_bottom = -64
+	controls_layer.add_child(joystick)
 
 	# Bottom-center contextual prompt & toast pill
 	var bottom_center := VBoxContainer.new()
@@ -268,10 +288,10 @@ func _build_hud() -> void:
 	bottom_center.anchor_right = 0.5
 	bottom_center.anchor_top = 1.0
 	bottom_center.anchor_bottom = 1.0
-	bottom_center.offset_left = -220
-	bottom_center.offset_right = 220
-	bottom_center.offset_top = -156
-	bottom_center.offset_bottom = -24
+	bottom_center.offset_left = -240
+	bottom_center.offset_right = 240
+	bottom_center.offset_top = -175
+	bottom_center.offset_bottom = -34
 	bottom_center.alignment = BoxContainer.ALIGNMENT_END
 	bottom_center.add_theme_constant_override("separation", 10)
 	bottom_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -279,14 +299,14 @@ func _build_hud() -> void:
 
 	_interact_btn = Button.new()
 	_interact_btn.visible = false
-	UIStyleHelper.style_button(_interact_btn, UIStyleHelper.ACCENT_GOLD, 22, 18)
-	_interact_btn.custom_minimum_size = Vector2(220, 52)
+	UIStyleHelper.style_button(_interact_btn, UIStyleHelper.ACCENT_GOLD, 22, 19)
+	_interact_btn.custom_minimum_size = Vector2(260, 56)
 	_interact_btn.pressed.connect(func() -> void: GameState.emit_touch_interact())
 	bottom_center.add_child(_interact_btn)
 
 	_toast_panel = PanelContainer.new()
 	_toast_panel.visible = false
-	_toast_panel.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style(UIStyleHelper.BG_PANEL, UIStyleHelper.ACCENT_CYAN, 20, 2))
+	_toast_panel.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style(UIStyleHelper.BG_PANEL, UIStyleHelper.ACCENT_CYAN, 18, 2))
 	bottom_center.add_child(_toast_panel)
 
 	_toast_label = Label.new()
@@ -296,28 +316,28 @@ func _build_hud() -> void:
 	_toast_label.add_theme_color_override("font_color", UIStyleHelper.TEXT_PRIMARY)
 	_toast_panel.add_child(_toast_label)
 
-	# Bottom-right Echo + Jump buttons
+	# Ergonomic Right-Thumb Echo + Jump Buttons (pulled comfortably inward from corner)
 	var right_controls := HBoxContainer.new()
 	right_controls.anchor_left = 1.0
 	right_controls.anchor_right = 1.0
 	right_controls.anchor_top = 1.0
 	right_controls.anchor_bottom = 1.0
-	right_controls.offset_left = -246
-	right_controls.offset_right = -28
-	right_controls.offset_top = -132
-	right_controls.offset_bottom = -28
-	right_controls.add_theme_constant_override("separation", 18)
-	_root.add_child(right_controls)
+	right_controls.offset_left = -330
+	right_controls.offset_right = -96
+	right_controls.offset_top = -182
+	right_controls.offset_bottom = -64
+	right_controls.add_theme_constant_override("separation", 22)
+	controls_layer.add_child(right_controls)
 
 	_echo_btn = Button.new()
 	_echo_btn.text = LocalizationManager.t("hud_echo")
-	UIStyleHelper.style_circle_button(_echo_btn, 92, UIStyleHelper.ACCENT_CYAN, 18)
+	UIStyleHelper.style_circle_button(_echo_btn, 100, UIStyleHelper.ACCENT_CYAN, 19)
 	_echo_btn.pressed.connect(func() -> void: GameState.emit_touch_echo())
 	right_controls.add_child(_echo_btn)
 
 	_jump_btn = Button.new()
 	_jump_btn.text = "▲"
-	UIStyleHelper.style_circle_button(_jump_btn, 102, UIStyleHelper.BORDER_SUBTLE, 30)
+	UIStyleHelper.style_circle_button(_jump_btn, 110, UIStyleHelper.BORDER_SUBTLE, 32)
 	_jump_btn.pressed.connect(func() -> void: GameState.emit_touch_jump())
 	right_controls.add_child(_jump_btn)
 
@@ -326,16 +346,85 @@ func _build_hud() -> void:
 	_build_stage_select_overlay()
 	_build_codex_overlay()
 	_build_stage_clear_overlay()
+	_build_tutorial_overlay()
 	_refresh_counters()
 
 
 func _make_modal_backdrop() -> ColorRect:
 	var bg := ColorRect.new()
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg.color = Color(0.03, 0.04, 0.10, 0.78)
+	bg.color = Color(0.03, 0.04, 0.10, 0.82)
 	bg.visible = false
 	_root.add_child(bg)
 	return bg
+
+
+func _make_responsive_modal_panel(parent: Control, border: Color = UIStyleHelper.BORDER_SUBTLE) -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.anchor_left = 0.14
+	panel.anchor_right = 0.86
+	panel.anchor_top = 0.08
+	panel.anchor_bottom = 0.92
+	panel.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style(UIStyleHelper.BG_PANEL, border, 20, 2))
+	parent.add_child(panel)
+	return panel
+
+
+func _build_tutorial_overlay() -> void:
+	_tutorial_overlay = _make_modal_backdrop()
+	var panel := _make_responsive_modal_panel(_tutorial_overlay, UIStyleHelper.ACCENT_GOLD)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 12)
+	panel.add_child(vbox)
+
+	var title := Label.new()
+	title.set_meta("loc_key", "tut_title")
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_color_override("font_color", UIStyleHelper.ACCENT_GOLD)
+	vbox.add_child(title)
+
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(scroll)
+
+	var steps := VBoxContainer.new()
+	steps.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	steps.add_theme_constant_override("separation", 12)
+	scroll.add_child(steps)
+
+	for i in range(1, 4):
+		var card := PanelContainer.new()
+		card.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style(Color(0.12, 0.13, 0.27, 0.92), UIStyleHelper.ACCENT_CYAN, 14, 1))
+		steps.add_child(card)
+		var cv := VBoxContainer.new()
+		cv.add_theme_constant_override("separation", 4)
+		card.add_child(cv)
+
+		var st_title := Label.new()
+		st_title.set_meta("loc_key", "tut_step%d_title" % i)
+		st_title.add_theme_font_size_override("font_size", 19)
+		st_title.add_theme_color_override("font_color", UIStyleHelper.ACCENT_GOLD)
+		cv.add_child(st_title)
+
+		var st_body := Label.new()
+		st_body.set_meta("loc_key", "tut_step%d_body" % i)
+		st_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		st_body.add_theme_font_size_override("font_size", 16)
+		st_body.add_theme_color_override("font_color", UIStyleHelper.TEXT_PRIMARY)
+		cv.add_child(st_body)
+
+	var start_btn := Button.new()
+	start_btn.set_meta("loc_key", "tut_start_btn")
+	start_btn.custom_minimum_size = Vector2(0, 54)
+	UIStyleHelper.style_button(start_btn, UIStyleHelper.ACCENT_GOLD, 16, 20)
+	start_btn.pressed.connect(func() -> void:
+		SaveManager.set_setting("tutorial_seen", true)
+		_tutorial_overlay.visible = false
+		get_tree().paused = false
+	)
+	vbox.add_child(start_btn)
 
 
 func _build_pause_overlay() -> void:
@@ -345,12 +434,12 @@ func _build_pause_overlay() -> void:
 	_pause_overlay.add_child(center)
 
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(380, 0)
+	panel.custom_minimum_size = Vector2(400, 0)
 	panel.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style())
 	center.add_child(panel)
 
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 12)
+	vbox.add_theme_constant_override("separation", 10)
 	panel.add_child(vbox)
 
 	var header := Label.new()
@@ -362,6 +451,7 @@ func _build_pause_overlay() -> void:
 
 	var buttons := [
 		{"name": "BtnResume", "key": "menu_resume", "cb": func() -> void: toggle_pause()},
+		{"name": "BtnHowTo", "key": "menu_how_to_play", "cb": func() -> void: open_tutorial()},
 		{"name": "BtnRestart", "key": "menu_restart_cp", "cb": func() -> void: toggle_pause(); restart_checkpoint_requested.emit()},
 		{"name": "BtnSettings", "key": "menu_settings", "cb": func() -> void: _pause_overlay.visible = false; _settings_overlay.visible = true},
 		{"name": "BtnMainMenu", "key": "menu_main", "cb": func() -> void: GameState.go_to_main_menu()},
@@ -370,7 +460,7 @@ func _build_pause_overlay() -> void:
 		var btn := Button.new()
 		btn.name = str(b["name"])
 		btn.set_meta("loc_key", str(b["key"]))
-		btn.custom_minimum_size = Vector2(0, 52)
+		btn.custom_minimum_size = Vector2(0, 50)
 		UIStyleHelper.style_button(btn)
 		btn.pressed.connect(b["cb"] as Callable)
 		vbox.add_child(btn)
@@ -378,14 +468,7 @@ func _build_pause_overlay() -> void:
 
 func _build_settings_overlay() -> void:
 	_settings_overlay = _make_modal_backdrop()
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_settings_overlay.add_child(center)
-
-	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(440, 0)
-	panel.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style())
-	center.add_child(panel)
+	var panel := _make_responsive_modal_panel(_settings_overlay)
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 12)
@@ -422,26 +505,26 @@ func _build_settings_overlay() -> void:
 
 	var lang_btn := Button.new()
 	lang_btn.set_meta("loc_key", "settings_toggle_lang")
-	lang_btn.custom_minimum_size = Vector2(0, 48)
+	lang_btn.custom_minimum_size = Vector2(0, 50)
 	UIStyleHelper.style_button(lang_btn, UIStyleHelper.ACCENT_CYAN)
 	lang_btn.pressed.connect(func() -> void: LocalizationManager.toggle_language())
 	vbox.add_child(lang_btn)
 
 	var gfx_btn := Button.new()
 	gfx_btn.name = "GfxBtn"
-	gfx_btn.custom_minimum_size = Vector2(0, 48)
+	gfx_btn.custom_minimum_size = Vector2(0, 50)
 	UIStyleHelper.style_button(gfx_btn)
 	gfx_btn.pressed.connect(func() -> void:
 		var cur := str(SaveManager.get_setting("graphics_quality", "medium"))
 		var nxt := "high" if cur == "medium" else ("low" if cur == "high" else "medium")
 		SaveManager.set_setting("graphics_quality", nxt)
-		gfx_btn.text = LocalizationManager.t("settings_graphics") + ": " + nxt.to_upper()
+		gfx_btn.text = LocalizationManager.t("settings_graphics") + ": " + UIStyleHelper.quality_label_ar(nxt)
 	)
 	vbox.add_child(gfx_btn)
 
 	var back_btn := Button.new()
 	back_btn.set_meta("loc_key", "menu_back")
-	back_btn.custom_minimum_size = Vector2(0, 48)
+	back_btn.custom_minimum_size = Vector2(0, 50)
 	UIStyleHelper.style_button(back_btn)
 	back_btn.pressed.connect(func() -> void: _settings_overlay.visible = false; _pause_overlay.visible = true)
 	vbox.add_child(back_btn)
@@ -449,15 +532,7 @@ func _build_settings_overlay() -> void:
 
 func _build_stage_select_overlay() -> void:
 	_stage_select_overlay = _make_modal_backdrop()
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_stage_select_overlay.add_child(center)
-
-	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(760, 500)
-	panel.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style())
-	center.add_child(panel)
-
+	var panel := _make_responsive_modal_panel(_stage_select_overlay)
 	var vbox := VBoxContainer.new()
 	vbox.name = "StageListRoot"
 	vbox.add_theme_constant_override("separation", 10)
@@ -484,26 +559,37 @@ func _open_stage_select() -> void:
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root_vbox.add_child(scroll)
 
-	var grid := GridContainer.new()
-	grid.columns = 5
-	grid.add_theme_constant_override("h_separation", 10)
-	grid.add_theme_constant_override("v_separation", 10)
-	scroll.add_child(grid)
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 10)
+	scroll.add_child(list)
 
-	for s in range(1, 31):
-		var unlocked := SaveManager.is_stage_unlocked(s)
-		var completed := SaveManager.is_stage_completed(s)
-		var secret_done := SaveManager.is_secret_collected("mem_%02d" % s)
-		var btn := Button.new()
-		btn.custom_minimum_size = Vector2(128, 66)
-		var badge := " ★" if completed else ""
-		var mem_badge := " ◆" if secret_done else ""
-		btn.text = "%d%s%s" % [s, badge, mem_badge] if unlocked else "🔒 %d" % s
-		btn.disabled = not unlocked
-		UIStyleHelper.style_button(btn, UIStyleHelper.ACCENT_GOLD if completed else UIStyleHelper.BORDER_SUBTLE, 14, 18)
-		var sid := s
-		btn.pressed.connect(func() -> void: GameState.start_stage(sid))
-		grid.add_child(btn)
+	for w in range(1, 7):
+		var w_lbl := Label.new()
+		w_lbl.text = "%s %d — %s" % [LocalizationManager.t("world_label"), w, LocalizationManager.t("world_%d_name" % w)]
+		w_lbl.add_theme_font_size_override("font_size", 18)
+		w_lbl.add_theme_color_override("font_color", UIStyleHelper.ACCENT_CYAN)
+		list.add_child(w_lbl)
+
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		list.add_child(row)
+
+		for offset in range(5):
+			var sid := (w - 1) * 5 + offset + 1
+			var unlocked := SaveManager.is_stage_unlocked(sid)
+			var completed := SaveManager.is_stage_completed(sid)
+			var secret_done := SaveManager.is_secret_collected("mem_%02d" % sid)
+			var btn := Button.new()
+			btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			btn.custom_minimum_size = Vector2(0, 56)
+			var badge := " ★" if completed else ""
+			var mem_badge := " ◆" if secret_done else ""
+			btn.text = ("%d%s%s" % [sid, badge, mem_badge]) if unlocked else ("%d" % sid)
+			btn.disabled = not unlocked
+			UIStyleHelper.style_button(btn, UIStyleHelper.ACCENT_GOLD if completed else UIStyleHelper.BORDER_SUBTLE, 12, 18)
+			btn.pressed.connect(func() -> void: GameState.start_stage(sid))
+			row.add_child(btn)
 
 	var close_btn := Button.new()
 	close_btn.text = LocalizationManager.t("menu_close")
@@ -515,15 +601,7 @@ func _open_stage_select() -> void:
 
 func _build_codex_overlay() -> void:
 	_codex_overlay = _make_modal_backdrop()
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_codex_overlay.add_child(center)
-
-	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(740, 500)
-	panel.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style())
-	center.add_child(panel)
-
+	var panel := _make_responsive_modal_panel(_codex_overlay, UIStyleHelper.ACCENT_CYAN)
 	var vbox := VBoxContainer.new()
 	vbox.name = "CodexListRoot"
 	vbox.add_theme_constant_override("separation", 10)
@@ -584,7 +662,7 @@ func _build_stage_clear_overlay() -> void:
 	_stage_clear_overlay.add_child(center)
 
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(420, 0)
+	panel.custom_minimum_size = Vector2(440, 0)
 	panel.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style(UIStyleHelper.BG_PANEL, UIStyleHelper.ACCENT_GOLD, 20, 2))
 	center.add_child(panel)
 
@@ -635,7 +713,7 @@ func _refresh_labels() -> void:
 	_apply_meta_localization(_root)
 	var gfx_btn := _settings_overlay.find_child("GfxBtn", true, false) as Button
 	if gfx_btn != null:
-		gfx_btn.text = LocalizationManager.t("settings_graphics") + ": " + str(SaveManager.get_setting("graphics_quality", "medium")).to_upper()
+		gfx_btn.text = LocalizationManager.t("settings_graphics") + ": " + UIStyleHelper.quality_label_ar(str(SaveManager.get_setting("graphics_quality", "medium")))
 	_refresh_counters()
 
 
@@ -651,10 +729,6 @@ func _apply_meta_localization(node: Node) -> void:
 
 
 func _refresh_counters() -> void:
-	if _secret_count_label != null:
-		_secret_count_label.text = "◆ %d / 30" % SaveManager.get_collected_secret_count()
-
-
-func _on_banner_visibility_changed(is_visible: bool) -> void:
-	if _top_margin != null:
-		_top_margin.add_theme_constant_override("margin_top", 68 if is_visible else 18)
+	var cbtn := _root.find_child("CrystalBtn", true, false) as Button
+	if cbtn != null:
+		cbtn.text = " %d / 30" % SaveManager.get_collected_secret_count()

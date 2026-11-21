@@ -73,10 +73,10 @@ func _setup_environment() -> void:
 
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = (world_palette["light"] as Color).darkened(0.45)
-	env.ambient_light_energy = 0.72
+	env.ambient_light_energy = 0.88
 	env.fog_enabled = true
 	env.fog_light_color = world_palette["fog"] as Color
-	env.fog_density = 0.012
+	env.fog_density = 0.004
 	env.glow_enabled = true
 	env.glow_intensity = 0.45
 	env.glow_bloom = 0.18
@@ -87,10 +87,28 @@ func _setup_environment() -> void:
 
 	var moon := DirectionalLight3D.new()
 	moon.light_color = world_palette["light"] as Color
-	moon.light_energy = 1.05
-	moon.rotation_degrees = Vector3(-48.0, 35.0, 0.0)
+	moon.light_energy = 1.25
+	moon.rotation_degrees = Vector3(-42.0, 38.0, 0.0)
 	moon.shadow_enabled = (str(SaveManager.get_setting("graphics_quality", "medium")) != "low")
+	moon.shadow_blur = 2.2
+	moon.directional_shadow_max_distance = 48.0
 	add_child(moon)
+
+	# Warm rose-pink atmospheric fill light from bottom-left (matches reference mood)
+	var rose_fill := DirectionalLight3D.new()
+	rose_fill.light_color = Color(0.95, 0.48, 0.62)
+	rose_fill.light_energy = 0.42
+	rose_fill.rotation_degrees = Vector3(-22.0, -135.0, 0.0)
+	rose_fill.shadow_enabled = false
+	add_child(rose_fill)
+
+	# Cool sky-blue rim light from top-right (matches reference mood)
+	var blue_rim := DirectionalLight3D.new()
+	blue_rim.light_color = Color(0.32, 0.76, 1.0)
+	blue_rim.light_energy = 0.48
+	blue_rim.rotation_degrees = Vector3(-30.0, 125.0, 0.0)
+	blue_rim.shadow_enabled = false
+	add_child(blue_rim)
 
 
 func _build_stage_geometry() -> void:
@@ -126,6 +144,13 @@ func _build_stage_geometry() -> void:
 		col.position = Vector3(0.0, -0.5, 0.0)
 		body.add_child(col)
 		_world_root.add_child(body)
+		if sz.x >= 5.0 and sz.z >= 5.0 and state_req < 0:
+			var g1 := LowPolyMeshLibrary.create_grass_tuft(side_col.lightened(0.22))
+			g1.position = Vector3(-sz.x * 0.38, 0.0, sz.z * 0.34)
+			body.add_child(g1)
+			var g2 := LowPolyMeshLibrary.create_grass_tuft(side_col.lightened(0.18))
+			g2.position = Vector3(sz.x * 0.36, 0.0, -sz.z * 0.36)
+			body.add_child(g2)
 
 		if state_req >= 0:
 			_state_nodes.append({"node": body, "body": body, "state": state_req})

@@ -77,8 +77,9 @@ func _build_visuals() -> void:
 	# Warm or colored portal light
 	_glow_light = OmniLight3D.new()
 	_glow_light.light_color = door_color
-	_glow_light.light_energy = 2.0
-	_glow_light.omni_range = 6.5
+	_glow_light.light_energy = 3.2
+	_glow_light.omni_range = 8.5
+	_glow_light.shadow_enabled = true
 	_glow_light.position = Vector3(0.0, 1.35, 0.35)
 	add_child(_glow_light)
 
@@ -117,7 +118,7 @@ func _refresh_visual_state() -> void:
 		_leaf_mat.emission_energy_multiplier = 2.1 if is_unlocked else 0.35
 		_leaf_mat.albedo_color = door_color if is_unlocked else door_color.darkened(0.55)
 	if _glow_light != null:
-		_glow_light.light_energy = 2.2 if is_unlocked else 0.45
+		_glow_light.light_energy = 3.4 if is_unlocked else 0.55
 
 
 func can_interact(_player: Node) -> bool:

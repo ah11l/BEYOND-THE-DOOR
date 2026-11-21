@@ -8,14 +8,14 @@ extends RefCounted
 const WORLD_PALETTES := {
 	1: {
 		"name_key": "world_1_name",
-		"top": Color(0.49, 0.42, 0.72),
-		"side": Color(0.24, 0.21, 0.44),
+		"top": Color(0.72, 0.65, 0.86),
+		"side": Color(0.26, 0.20, 0.42),
 		"accent": Color(0.84, 0.34, 0.68), # Magenta-pink tree crown
 		"sky_top": Color(0.035, 0.055, 0.145),
 		"sky_horizon": Color(0.24, 0.14, 0.36),
 		"sky_bottom": Color(0.11, 0.08, 0.24),
 		"fog": Color(0.16, 0.12, 0.28),
-		"light": Color(0.76, 0.74, 1.0),
+		"light": Color(0.92, 0.88, 1.0),
 	},
 	2: {
 		"name_key": "world_2_name",
@@ -408,3 +408,23 @@ static func build_hooded_character(is_ghost: bool = false) -> Node3D:
 	lantern_holder.add_child(lantern_light)
 
 	return rig
+
+
+static func create_grass_tuft(color: Color = Color(0.36, 0.30, 0.54)) -> Node3D:
+	var root := Node3D.new()
+	root.name = "GrassTuft"
+	var mat := make_flat_material(color, 0.88)
+	for i in range(4):
+		var blade := MeshInstance3D.new()
+		var cyl := CylinderMesh.new()
+		cyl.top_radius = 0.008
+		cyl.bottom_radius = 0.045
+		cyl.height = 0.28 + float(i % 2) * 0.10
+		cyl.radial_segments = 4
+		blade.mesh = cyl
+		var ang := float(i) * (TAU / 4.0) + 0.3
+		blade.position = Vector3(cos(ang) * 0.08, cyl.height * 0.45, sin(ang) * 0.08)
+		blade.rotation = Vector3(sin(ang) * 0.28, ang, -cos(ang) * 0.28)
+		blade.material_override = mat
+		root.add_child(blade)
+	return root

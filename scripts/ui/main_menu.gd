@@ -1,7 +1,7 @@
 extends Control
 
-## Atmospheric Main Menu for BEYOND THE DOOR — ما وراء الباب.
-## Supports New Game / Continue, Stage Select, Memories Codex, Settings, Language, Credits, and Exit.
+## Responsive Arabic/English Main Menu for BEYOND THE DOOR — ما وراء الباب.
+## Fits all Android phone aspect ratios (16:9 to 21:9) cleanly with How to Play guide.
 
 var _continue_btn: Button
 var _modal_container: Control
@@ -19,13 +19,11 @@ func _ready() -> void:
 func _build_ui() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 
-	# Deep midnight gradient background
 	var bg := ColorRect.new()
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	bg.color = Color(0.055, 0.065, 0.165, 1.0)
 	add_child(bg)
 
-	# Subtle violet horizon band
 	var horizon := ColorRect.new()
 	horizon.anchor_left = 0.0
 	horizon.anchor_right = 1.0
@@ -34,41 +32,50 @@ func _build_ui() -> void:
 	horizon.color = Color(0.20, 0.11, 0.32, 0.45)
 	add_child(horizon)
 
-	var main_hbox := HBoxContainer.new()
-	main_hbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-	main_hbox.add_theme_constant_override("separation", 40)
-	add_child(main_hbox)
+	var safe := MarginContainer.new()
+	safe.set_anchors_preset(Control.PRESET_FULL_RECT)
+	safe.add_theme_constant_override("margin_left", 56)
+	safe.add_theme_constant_override("margin_right", 56)
+	safe.add_theme_constant_override("margin_top", 24)
+	safe.add_theme_constant_override("margin_bottom", 24)
+	add_child(safe)
 
-	# Left / Title Hero Column
+	var main_hbox := HBoxContainer.new()
+	main_hbox.add_theme_constant_override("separation", 36)
+	safe.add_child(main_hbox)
+
+	# Title Hero Column
 	var left_center := CenterContainer.new()
 	left_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	main_hbox.add_child(left_center)
 
 	var hero_vbox := VBoxContainer.new()
-	hero_vbox.add_theme_constant_override("separation", 12)
+	hero_vbox.add_theme_constant_override("separation", 10)
 	left_center.add_child(hero_vbox)
 
 	var icon_rect := TextureRect.new()
 	if ResourceLoader.exists("res://icon.svg"):
 		icon_rect.texture = load("res://icon.svg")
-	icon_rect.custom_minimum_size = Vector2(148, 148)
+	icon_rect.custom_minimum_size = Vector2(132, 132)
 	icon_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 	icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	hero_vbox.add_child(icon_rect)
 
-	var title_en := Label.new()
-	title_en.text = "BEYOND THE DOOR"
-	title_en.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title_en.add_theme_font_size_override("font_size", 42)
-	title_en.add_theme_color_override("font_color", UIStyleHelper.ACCENT_GOLD)
-	hero_vbox.add_child(title_en)
-
 	var title_ar := Label.new()
 	title_ar.text = "ما وراء الباب"
 	title_ar.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title_ar.add_theme_font_size_override("font_size", 32)
-	title_ar.add_theme_color_override("font_color", Color(0.98, 0.88, 0.62))
+	title_ar.add_theme_font_size_override("font_size", 40)
+	title_ar.add_theme_color_override("font_color", UIStyleHelper.ACCENT_GOLD)
 	hero_vbox.add_child(title_ar)
+
+	var title_en := Label.new()
+	title_en.name = "TitleEn"
+	title_en.text = "BEYOND THE DOOR"
+	title_en.visible = not LocalizationManager.is_rtl()
+	title_en.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title_en.add_theme_font_size_override("font_size", 24)
+	title_en.add_theme_color_override("font_color", Color(0.95, 0.88, 0.68))
+	hero_vbox.add_child(title_en)
 
 	var tagline := Label.new()
 	tagline.set_meta("loc_key", "game_tagline")
@@ -84,7 +91,7 @@ func _build_ui() -> void:
 	stats_lbl.add_theme_color_override("font_color", UIStyleHelper.ACCENT_CYAN)
 	hero_vbox.add_child(stats_lbl)
 
-	# Right / Navigation Buttons Column
+	# Navigation Column (scrollable on compact heights)
 	var right_center := CenterContainer.new()
 	right_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	main_hbox.add_child(right_center)
@@ -95,13 +102,13 @@ func _build_ui() -> void:
 	right_center.add_child(card)
 
 	var btn_vbox := VBoxContainer.new()
-	btn_vbox.add_theme_constant_override("separation", 10)
+	btn_vbox.add_theme_constant_override("separation", 8)
 	card.add_child(btn_vbox)
 
 	_continue_btn = Button.new()
 	_continue_btn.set_meta("loc_key", "menu_continue")
-	_continue_btn.custom_minimum_size = Vector2(0, 54)
-	UIStyleHelper.style_button(_continue_btn, UIStyleHelper.ACCENT_GOLD, 16, 20)
+	_continue_btn.custom_minimum_size = Vector2(0, 48)
+	UIStyleHelper.style_button(_continue_btn, UIStyleHelper.ACCENT_GOLD, 14, 19)
 	_continue_btn.pressed.connect(func() -> void:
 		AudioManager.play_sfx("ui_click")
 		GameState.start_stage(int(SaveManager.data.get("last_played_stage", 1)))
@@ -110,59 +117,63 @@ func _build_ui() -> void:
 
 	var new_btn := Button.new()
 	new_btn.set_meta("loc_key", "menu_new_game")
-	new_btn.custom_minimum_size = Vector2(0, 50)
-	UIStyleHelper.style_button(new_btn)
+	new_btn.custom_minimum_size = Vector2(0, 46)
+	UIStyleHelper.style_button(new_btn, UIStyleHelper.BORDER_SUBTLE, 14, 18)
 	new_btn.pressed.connect(func() -> void:
 		AudioManager.play_sfx("ui_click")
 		GameState.start_stage(1)
 	)
 	btn_vbox.add_child(new_btn)
 
+	var how_btn := Button.new()
+	how_btn.set_meta("loc_key", "menu_how_to_play")
+	how_btn.custom_minimum_size = Vector2(0, 44)
+	UIStyleHelper.style_button(how_btn, UIStyleHelper.ACCENT_CYAN, 14, 18)
+	how_btn.pressed.connect(_show_how_to_play_modal)
+	btn_vbox.add_child(how_btn)
+
 	var stages_btn := Button.new()
 	stages_btn.set_meta("loc_key", "menu_stage_select")
-	stages_btn.custom_minimum_size = Vector2(0, 48)
-	UIStyleHelper.style_button(stages_btn)
+	stages_btn.custom_minimum_size = Vector2(0, 44)
+	UIStyleHelper.style_button(stages_btn, UIStyleHelper.BORDER_SUBTLE, 14, 18)
 	stages_btn.pressed.connect(_show_stage_select_modal)
 	btn_vbox.add_child(stages_btn)
 
 	var mem_btn := Button.new()
 	mem_btn.set_meta("loc_key", "menu_memories")
-	mem_btn.custom_minimum_size = Vector2(0, 48)
-	UIStyleHelper.style_button(mem_btn, UIStyleHelper.ACCENT_CYAN)
+	mem_btn.custom_minimum_size = Vector2(0, 44)
+	UIStyleHelper.style_button(mem_btn, UIStyleHelper.BORDER_SUBTLE, 14, 18)
 	mem_btn.pressed.connect(_show_memories_modal)
 	btn_vbox.add_child(mem_btn)
 
 	var settings_btn := Button.new()
 	settings_btn.set_meta("loc_key", "menu_settings")
-	settings_btn.custom_minimum_size = Vector2(0, 48)
-	UIStyleHelper.style_button(settings_btn)
+	settings_btn.custom_minimum_size = Vector2(0, 44)
+	UIStyleHelper.style_button(settings_btn, UIStyleHelper.BORDER_SUBTLE, 14, 18)
 	settings_btn.pressed.connect(_show_settings_modal)
 	btn_vbox.add_child(settings_btn)
 
+	var bottom_row := HBoxContainer.new()
+	bottom_row.add_theme_constant_override("separation", 8)
+	btn_vbox.add_child(bottom_row)
+
 	var lang_btn := Button.new()
 	lang_btn.set_meta("loc_key", "settings_toggle_lang")
-	lang_btn.custom_minimum_size = Vector2(0, 46)
-	UIStyleHelper.style_button(lang_btn)
+	lang_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lang_btn.custom_minimum_size = Vector2(0, 42)
+	UIStyleHelper.style_button(lang_btn, UIStyleHelper.BORDER_SUBTLE, 12, 16)
 	lang_btn.pressed.connect(func() -> void:
 		AudioManager.play_sfx("ui_click")
 		LocalizationManager.toggle_language()
 	)
-	btn_vbox.add_child(lang_btn)
+	bottom_row.add_child(lang_btn)
 
 	var credits_btn := Button.new()
 	credits_btn.set_meta("loc_key", "menu_credits")
-	credits_btn.custom_minimum_size = Vector2(0, 44)
-	UIStyleHelper.style_button(credits_btn)
+	credits_btn.custom_minimum_size = Vector2(105, 42)
+	UIStyleHelper.style_button(credits_btn, UIStyleHelper.BORDER_SUBTLE, 12, 16)
 	credits_btn.pressed.connect(_show_credits_modal)
-	btn_vbox.add_child(credits_btn)
-
-	if OS.get_name() != "Web" and OS.get_name() != "iOS":
-		var exit_btn := Button.new()
-		exit_btn.set_meta("loc_key", "menu_exit")
-		exit_btn.custom_minimum_size = Vector2(0, 44)
-		UIStyleHelper.style_button(exit_btn)
-		exit_btn.pressed.connect(func() -> void: get_tree().quit())
-		btn_vbox.add_child(exit_btn)
+	bottom_row.add_child(credits_btn)
 
 	_build_modal()
 
@@ -170,18 +181,17 @@ func _build_ui() -> void:
 func _build_modal() -> void:
 	_modal_container = ColorRect.new()
 	_modal_container.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_modal_container.color = Color(0.03, 0.04, 0.10, 0.84)
+	_modal_container.color = Color(0.03, 0.04, 0.10, 0.85)
 	_modal_container.visible = false
 	add_child(_modal_container)
 
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_modal_container.add_child(center)
-
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(760, 500)
+	panel.anchor_left = 0.14
+	panel.anchor_right = 0.86
+	panel.anchor_top = 0.08
+	panel.anchor_bottom = 0.92
 	panel.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style())
-	center.add_child(panel)
+	_modal_container.add_child(panel)
 
 	var outer := VBoxContainer.new()
 	outer.add_theme_constant_override("separation", 12)
@@ -215,6 +225,34 @@ func _clear_modal_body() -> void:
 		c.queue_free()
 
 
+func _show_how_to_play_modal() -> void:
+	AudioManager.play_sfx("ui_click")
+	_clear_modal_body()
+	_modal_title.text = LocalizationManager.t("tut_title")
+	_modal_container.visible = true
+
+	for i in range(1, 4):
+		var card := PanelContainer.new()
+		card.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style(Color(0.12, 0.13, 0.27, 0.92), UIStyleHelper.ACCENT_CYAN, 14, 1))
+		_modal_body.add_child(card)
+		var cv := VBoxContainer.new()
+		cv.add_theme_constant_override("separation", 4)
+		card.add_child(cv)
+
+		var st_title := Label.new()
+		st_title.text = LocalizationManager.t("tut_step%d_title" % i)
+		st_title.add_theme_font_size_override("font_size", 19)
+		st_title.add_theme_color_override("font_color", UIStyleHelper.ACCENT_GOLD)
+		cv.add_child(st_title)
+
+		var st_body := Label.new()
+		st_body.text = LocalizationManager.t("tut_step%d_body" % i)
+		st_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		st_body.add_theme_font_size_override("font_size", 16)
+		st_body.add_theme_color_override("font_color", UIStyleHelper.TEXT_PRIMARY)
+		cv.add_child(st_body)
+
+
 func _show_stage_select_modal() -> void:
 	AudioManager.play_sfx("ui_click")
 	_clear_modal_body()
@@ -239,10 +277,10 @@ func _show_stage_select_modal() -> void:
 			var mem := SaveManager.is_secret_collected("mem_%02d" % sid)
 			var btn := Button.new()
 			btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			btn.custom_minimum_size = Vector2(0, 56)
-			btn.text = "%d%s%s" % [sid, " ★" if done else "", " ◆" if mem else ""] if unlocked else "🔒 %d" % sid
+			btn.custom_minimum_size = Vector2(0, 54)
+			btn.text = ("%d%s%s" % [sid, " ★" if done else "", " ◆" if mem else ""]) if unlocked else ("%d" % sid)
 			btn.disabled = not unlocked
-			UIStyleHelper.style_button(btn, UIStyleHelper.ACCENT_GOLD if done else UIStyleHelper.BORDER_SUBTLE, 12, 16)
+			UIStyleHelper.style_button(btn, UIStyleHelper.ACCENT_GOLD if done else UIStyleHelper.BORDER_SUBTLE, 12, 17)
 			btn.pressed.connect(func() -> void: GameState.start_stage(sid))
 			row.add_child(btn)
 
@@ -297,14 +335,14 @@ func _show_settings_modal() -> void:
 	_modal_body.add_child(s_slider)
 
 	var gfx_btn := Button.new()
-	gfx_btn.text = LocalizationManager.t("settings_graphics") + ": " + str(SaveManager.get_setting("graphics_quality", "medium")).to_upper()
+	gfx_btn.text = LocalizationManager.t("settings_graphics") + ": " + UIStyleHelper.quality_label_ar(str(SaveManager.get_setting("graphics_quality", "medium")))
 	gfx_btn.custom_minimum_size = Vector2(0, 48)
 	UIStyleHelper.style_button(gfx_btn)
 	gfx_btn.pressed.connect(func() -> void:
 		var cur := str(SaveManager.get_setting("graphics_quality", "medium"))
 		var nxt := "high" if cur == "medium" else ("low" if cur == "high" else "medium")
 		SaveManager.set_setting("graphics_quality", nxt)
-		gfx_btn.text = LocalizationManager.t("settings_graphics") + ": " + nxt.to_upper()
+		gfx_btn.text = LocalizationManager.t("settings_graphics") + ": " + UIStyleHelper.quality_label_ar(nxt)
 	)
 	_modal_body.add_child(gfx_btn)
 
@@ -346,12 +384,15 @@ func _on_language_changed(_lang: String, _rtl: bool) -> void:
 func _refresh_texts() -> void:
 	_continue_btn.visible = SaveManager.has_progress()
 	_apply_loc(self)
+	var ten := find_child("TitleEn", true, false) as Label
+	if ten != null:
+		ten.visible = not LocalizationManager.is_rtl()
 	var stats := find_child("StatsLabel", true, false) as Label
 	if stats != null:
 		var done_cnt := (SaveManager.data.get("completed_stages", []) as Array).size()
 		var mem_cnt := SaveManager.get_collected_secret_count()
 		var end_cnt := (SaveManager.data.get("unlocked_endings", []) as Array).size()
-		stats.text = "★ %d/30   •   ◆ %d/30   •   🏆 %d/3" % [done_cnt, mem_cnt, end_cnt]
+		stats.text = "★ %d/30   •   ◆ %d/30   •   ✦ %d/3" % [done_cnt, mem_cnt, end_cnt]
 
 
 func _apply_loc(node: Node) -> void:
