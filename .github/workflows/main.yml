@@ -1,4 +1,4 @@
-name: Build Android APK (Godot 4.5.2 + AdMob)
+name: Build BEYOND THE DOOR (APK + Google Play AAB)
 
 on:
   push:
@@ -13,6 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: barichello/godot-ci:4.5.2
+    env:
+      BTD_RELEASE_KEYSTORE_BASE64: ${{ secrets.BTD_RELEASE_KEYSTORE_BASE64 }}
+      BTD_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.BTD_RELEASE_KEYSTORE_PASSWORD }}
+      BTD_RELEASE_KEY_ALIAS: ${{ secrets.BTD_RELEASE_KEY_ALIAS }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -73,5 +77,65 @@ jobs:
         with:
           name: beyond-the-door-debug-apk
           path: builds/beyond_the_door_debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Prepare Gradle template, AdMob Manifest & Release Keystore (for Google Play AAB)
+        if: ${{ env.BTD_RELEASE_KEYSTORE_BASE64 != '' && env.BTD_RELEASE_KEYSTORE_PASSWORD != '' && env.BTD_RELEASE_KEY_ALIAS != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$BTD_RELEASE_KEYSTORE_BASE64" | base64 --decode > builds/release.keystore
+          test -s builds/release.keystore
+
+          # Unpack Godot 4.5.2 Android Gradle build template if not present
+          if [ ! -d android/build ]; then
+            mkdir -p android/build
+            unzip -q /root/.local/share/godot/export_templates/4.5.2.stable/android_source.zip -d android/build
+          fi
+
+          # Inject AdMob APPLICATION_ID into AndroidManifest.xml + configure release keystore in export_presets.cfg
+          python3 - <<'PY'
+          import json, os, re
+          from pathlib import Path
+
+          mf = Path("android/build/AndroidManifest.xml")
+          if mf.exists():
+              xml = mf.read_text(encoding="utf-8")
+              if "com.google.android.gms.ads.APPLICATION_ID" not in xml:
+                  meta = '        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-2956752840406313~2454089044" />\n'
+                  xml = xml.replace("</application>", meta + "    </application>", 1)
+                  mf.write_text(xml, encoding="utf-8")
+
+          ep = Path("export_presets.cfg")
+          text = ep.read_text(encoding="utf-8")
+          idx = text.find("[preset.1.options]")
+          head, sec = text[:idx], text[idx:]
+          repl = {
+              "keystore/release": "builds/release.keystore",
+              "keystore/release_user": os.environ["BTD_RELEASE_KEY_ALIAS"],
+              "keystore/release_password": os.environ["BTD_RELEASE_KEYSTORE_PASSWORD"],
+          }
+          for k, v in repl.items():
+              sec = re.sub(rf'(?m)^{re.escape(k)}=".*"$', f"{k}={json.dumps(v)}", sec, count=1)
+          ep.write_text(head + sec, encoding="utf-8")
+          PY
+
+      - name: Export signed Google Play AAB (with AdMob Gradle Build)
+        if: ${{ env.BTD_RELEASE_KEYSTORE_BASE64 != '' && env.BTD_RELEASE_KEYSTORE_PASSWORD != '' && env.BTD_RELEASE_KEY_ALIAS != '' }}
+        shell: bash
+        env:
+          HOME: /root
+        run: |
+          set -euo pipefail
+          godot --headless --path . --export-release "Android Google Play AAB" builds/beyond_the_door_release.aab
+          test -s builds/beyond_the_door_release.aab
+
+      - name: Upload signed Google Play AAB
+        if: ${{ env.BTD_RELEASE_KEYSTORE_BASE64 != '' && env.BTD_RELEASE_KEYSTORE_PASSWORD != '' && env.BTD_RELEASE_KEY_ALIAS != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: beyond-the-door-google-play-aab
+          path: builds/beyond_the_door_release.aab
           if-no-files-found: error
           retention-days: 14
