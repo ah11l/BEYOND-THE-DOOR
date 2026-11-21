@@ -39,6 +39,23 @@ def island_xz_gap(a: dict, b: dict) -> float:
     return math.hypot(dx, dz)
 
 
+
+
+def check_assets() -> list:
+    errors = []
+    for p in sorted(ROOT.rglob("*.png")):
+        if p.read_bytes()[:8] != b"\x89PNG\r\n\x1a\n":
+            errors.append(f"Invalid PNG header: {p.relative_to(ROOT)}")
+    for p in sorted(ROOT.rglob("*.ttf")):
+        if p.read_bytes()[:4] not in (b"\x00\x01\x00\x00", b"OTTO", b"true"):
+            errors.append(f"Invalid TTF header: {p.relative_to(ROOT)}")
+    for p in sorted(ROOT.rglob("*.wav")):
+        b = p.read_bytes()
+        if b[:4] != b"RIFF" or b[8:12] != b"WAVE":
+            errors.append(f"Invalid WAV header: {p.relative_to(ROOT)}")
+    return errors
+
+
 def main() -> int:
     stages = {}
     for path in sorted(glob.glob(str(ROOT / "scripts/levels/world_*_data.gd"))):
@@ -159,7 +176,9 @@ def main() -> int:
     print(f"State-bound collectibles: {state_keys} keys, {state_secrets} memory crystals.")
     print(f"Broken references: {len(missing_refs)}")
     print(f"Unreachable golden doors: {len(unreachable_goals)}")
-    if missing_refs or unreachable_goals:
+    asset_errors = check_assets()
+    print(f"Asset header mismatches: {len(asset_errors)}")
+    if missing_refs or unreachable_goals or asset_errors:
         print("Details:", missing_refs[:5], unreachable_goals[:5])
         return 1
     return 0

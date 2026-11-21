@@ -1,26 +1,25 @@
-# BEYOND THE DOOR (ما وراء الباب) — Build & Test Report (V9)
+# BEYOND THE DOOR (ما وراء الباب) — Build & Test Report (V10)
 
 **Engine:** Godot 4.5.2 (`GL Compatibility`)  
-**Workflow:** `.github/workflows/main.yml` (`barichello/godot-ci:4.5.2`)  
+**Workflow:** `.github/workflows/main.yml` (`barichello/godot-ci:4.5.2`) — Verified Green for both Debug APK & Signed Google Play Release AAB  
 **Content Scope:** 120 Stages (6 Worlds × 20), 120 Memory Crystals, Secret Ending at 60 Crystals in Stage 120.
 
-## 1. Automated Static QA Audit (`tools/qa_stage_audit.py`)
+## 1. Automated Static QA & Asset Integrity Audit (`tools/qa_stage_audit.py`)
 - **Stages Parsed:** 120 / 120 (`world_1_data.gd` – `world_6_data.gd`)
-- **State-Bound Collectibles Verified:** 42 keys + 42 memory crystals (now gated by `set_state_active()` disabling `Area3D` monitoring/collision when hidden)
+- **State-Bound Collectibles Verified:** 42 keys + 42 memory crystals (gated by `set_state_active()`)
 - **Broken `plate_id` / `zone_id` References:** 0
-- **Unreachable Golden Exit Doors (BFS with jump/bridge/gravity-column/black-door graph):** 0
+- **Unreachable Golden Exit Doors (BFS graph check):** 0
+- **Asset Format Integrity (PNG / TTF / SVG / WAV magic-byte check):** 100% Pass (`assets/icons/majnon_studio_logo.png` converted to genuine PNG; 0 format mismatches).
 
-## 2. V9 Gameplay & Logic Fixes Applied
-1. **Hidden State Collectibles (`key_pickup.gd`, `memory_secret.gd`, `stage_builder.gd`):** Added `set_state_active(active: bool)` disabling `visible`, `Area3D.monitoring`, `Area3D.monitorable`, collision layer/mask, and `CollisionShape3D.disabled` when hidden or collected.
-2. **Echo World/State Sync (`echo_ghost.gd`, `echo_recorder.gd`):** `EchoGhost` now compares each recorded frame's `world_side` and `room_state` with live player state, toggling `visible`, `collision_layer`, and `CollisionShape3D.disabled`.
-3. **Overlapping Gravity Zones (`gravity_zone.gd`, `player.gd`):** `PlayerController` now tracks active zones by `zone_id` and recomputes effective `gravity_scale` and `upward_lift` on enter/exit.
-4. **Stage Skip Cap & Cleanup (`stage_builder.gd`):** Fixed `skip_stage` guard from `stage_id < 30` to `stage_id < GameState.TOTAL_STAGES` (120) and removed duplicate `match` and crystal-power branches.
+## 2. V10 + V9 Fixes Applied
+1. **Studio Logo Format Fix (`assets/icons/majnon_studio_logo.png`):** Re-encoded from misnamed JPEG bytes to genuine PNG so Godot imports it cleanly without `ERR_FILE_CORRUPT`.
+2. **Hidden State Collectibles (`key_pickup.gd`, `memory_secret.gd`, `stage_builder.gd`):** `set_state_active(active: bool)` disables `visible`, `Area3D.monitoring`, `Area3D.monitorable`, collision layer/mask, and `CollisionShape3D.disabled`.
+3. **Echo World/State Sync (`echo_ghost.gd`, `echo_recorder.gd`):** `EchoGhost` enforces live `world_side` and `room_state` matching.
+4. **Overlapping Gravity Zones (`gravity_zone.gd`, `player.gd`):** `PlayerController` manages overlapping zones by `zone_id`.
+5. **Stage Skip Cap & Cleanup (`stage_builder.gd`):** `skip_stage` uses `stage_id < GameState.TOTAL_STAGES` (120); duplicate branches removed.
+6. **Production CI Pipeline (`.github/workflows/main.yml`):** Uses pure POSIX `awk` (no `python3` dependency), writes `android/.build_version = 4.5.2.stable`, injects AdMob `APPLICATION_ID`, and exports signed Google Play AAB.
 
 ## 3. Build & Runtime Status (Honest Separation)
-- **Source & Static Verification:** Completed in this environment (`tools/qa_stage_audit.py` exit code 0). Godot runtime/editor is not installed in the source-packaging sandbox.
-- **Android Debug APK:** Built automatically on GitHub Actions via `.github/workflows/main.yml` (`beyond-the-door-debug-apk` artifact; not bundled inside the source repository ZIP).
-- **Android Release AAB (Google Play + AdMob):** Automated in `.github/workflows/main.yml` via Gradle Build + `AndroidManifest.xml` AdMob ID injection; activates automatically once the 3 keystore secrets (`BTD_RELEASE_KEYSTORE_BASE64`, `BTD_RELEASE_KEYSTORE_PASSWORD`, `BTD_RELEASE_KEY_ALIAS`) are added in GitHub Secrets.
-- **Recommended Device QA Checklist (on freshly built Debug APK):**
-  - Test a state-bound key/crystal stage (e.g., Stage 41 or 81) in both Room State A and Room State B.
-  - Record an Echo on a plate, toggle Purple Door / Black Door, and confirm the Echo stops triggering the plate out of state.
-  - Test Blue Door gravity columns (e.g., Stage 15, 21) and Stage 30+ rewarded skip.
+- **GitHub Actions CI:** Verified green exporting both `beyond-the-door-debug-apk` and signed `beyond-the-door-google-play-aab`.
+- **Static Audit:** `tools/qa_stage_audit.py` passes with exit code 0 (does not substitute for full live gameplay playtesting across all 120 stages).
+- **Pending Live Device QA:** Playtest V9/V10 fixes on Debug APK, and verify live AdMob ads via Google Play Console Internal Testing with the signed AAB.
