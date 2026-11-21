@@ -1,0 +1,61 @@
+name: Build Android APK (Godot 4.5.2 + AdMob)
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export-android:
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.5.2
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check Godot and project files
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --version
+          test -f project.godot
+          test -f export_presets.cfg
+          mkdir -p builds
+
+      - name: Fetch Poing Studios AdMob v5.1.0 GDScript addon
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f addons/admob/plugin.cfg ]; then
+            curl -fsSL https://github.com/poingstudios/godot-admob-plugin/archive/refs/tags/v5.1.0.zip -o /tmp/admob_v510.zip || true
+            if [ -s /tmp/admob_v510.zip ]; then
+              unzip -q /tmp/admob_v510.zip -d /tmp/admob_extract
+              SRC_ADDON=$(find /tmp/admob_extract -type d -path "*/addons/admob" | head -n 1)
+              if [ -n "$SRC_ADDON" ]; then
+                cp -rn "$SRC_ADDON/." addons/admob/ || true
+              fi
+            fi
+          fi
+
+      - name: Import project resources
+        shell: bash
+        run: godot --headless --path . --import || godot --headless --editor --path . --quit || true
+
+      - name: Export debug APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --export-debug "Android Debug APK" builds/beyond_the_door_debug.apk
+          test -s builds/beyond_the_door_debug.apk
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: beyond-the-door-debug-apk
+          path: builds/beyond_the_door_debug.apk
+          if-no-files-found: error
+          retention-days: 14
