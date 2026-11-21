@@ -85,41 +85,35 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          printf '%s' "$BTD_RELEASE_KEYSTORE_BASE64" | base64 --decode > builds/release.keystore
-          test -s builds/release.keystore
+          KEYSTORE_ABS="$(pwd)/builds/release.keystore"
+          printf '%s' "$BTD_RELEASE_KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > "$KEYSTORE_ABS"
+          test -s "$KEYSTORE_ABS"
 
-          # Unpack Godot 4.5.2 Android Gradle build template if not present
           if [ ! -d android/build ]; then
             mkdir -p android/build
             unzip -q /root/.local/share/godot/export_templates/4.5.2.stable/android_source.zip -d android/build
+            chmod +x android/build/gradlew || true
           fi
 
-          # Inject AdMob APPLICATION_ID into AndroidManifest.xml + configure release keystore in export_presets.cfg
-          python3 - <<'PY'
-          import json, os, re
-          from pathlib import Path
+          if [ -f android/build/AndroidManifest.xml ] && ! grep -q "com.google.android.gms.ads.APPLICATION_ID" android/build/AndroidManifest.xml; then
+            awk '{
+              if ($0 ~ /<\/application>/) {
+                print "        <meta-data android:name=\"com.google.android.gms.ads.APPLICATION_ID\" android:value=\"ca-app-pub-2956752840406313~2454089044\" />"
+              }
+              print
+            }' android/build/AndroidManifest.xml > android/build/AndroidManifest.xml.tmp
+            mv android/build/AndroidManifest.xml.tmp android/build/AndroidManifest.xml
+          fi
 
-          mf = Path("android/build/AndroidManifest.xml")
-          if mf.exists():
-              xml = mf.read_text(encoding="utf-8")
-              if "com.google.android.gms.ads.APPLICATION_ID" not in xml:
-                  meta = '        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-2956752840406313~2454089044" />\n'
-                  xml = xml.replace("</application>", meta + "    </application>", 1)
-                  mf.write_text(xml, encoding="utf-8")
-
-          ep = Path("export_presets.cfg")
-          text = ep.read_text(encoding="utf-8")
-          idx = text.find("[preset.1.options]")
-          head, sec = text[:idx], text[idx:]
-          repl = {
-              "keystore/release": "builds/release.keystore",
-              "keystore/release_user": os.environ["BTD_RELEASE_KEY_ALIAS"],
-              "keystore/release_password": os.environ["BTD_RELEASE_KEYSTORE_PASSWORD"],
-          }
-          for k, v in repl.items():
-              sec = re.sub(rf'(?m)^{re.escape(k)}=".*"$', f"{k}={json.dumps(v)}", sec, count=1)
-          ep.write_text(head + sec, encoding="utf-8")
-          PY
+          KEYSTORE_ABS="$KEYSTORE_ABS" awk '
+            /^\[preset\.1\.options\]/ { in_p1=1 }
+            /^\[/ && !/^\[preset\.1\.options\]/ { in_p1=0 }
+            in_p1 && /^keystore\/release=/ { print "keystore/release=\"" ENVIRON["KEYSTORE_ABS"] "\""; next }
+            in_p1 && /^keystore\/release_user=/ { print "keystore/release_user=\"" ENVIRON["BTD_RELEASE_KEY_ALIAS"] "\""; next }
+            in_p1 && /^keystore\/release_password=/ { print "keystore/release_password=\"" ENVIRON["BTD_RELEASE_KEYSTORE_PASSWORD"] "\""; next }
+            { print }
+          ' export_presets.cfg > export_presets.cfg.tmp
+          mv export_presets.cfg.tmp export_presets.cfg
 
       - name: Export signed Google Play AAB (with AdMob Gradle Build)
         if: ${{ env.BTD_RELEASE_KEYSTORE_BASE64 != '' && env.BTD_RELEASE_KEYSTORE_PASSWORD != '' && env.BTD_RELEASE_KEY_ALIAS != '' }}
