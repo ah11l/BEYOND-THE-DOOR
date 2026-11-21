@@ -201,7 +201,7 @@ func _build_live_3d_backdrop() -> void:
 	_bg_cam.look_at(Vector3(-0.9, 0.7, 0.0), Vector3.UP)
 
 
-func _spawn_3d_starfield(parent: Node3D, count: int) -> void:
+func _spawn_3d_starfield(parent: Node, count: int) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 42
 	var star_mat := StandardMaterial3D.new()
