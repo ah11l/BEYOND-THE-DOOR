@@ -271,15 +271,16 @@ func _build_hud() -> void:
 	_root.add_child(controls_layer)
 
 	# Ergonomic Left-Thumb Joystick (pulled comfortably inward from corner)
+	# Full left-half floating touchpad (touch anywhere on the left side to move smoothly)
 	var joystick := TouchJoystick.new()
 	joystick.anchor_left = 0.0
-	joystick.anchor_top = 1.0
-	joystick.anchor_right = 0.0
+	joystick.anchor_top = 0.14
+	joystick.anchor_right = 0.48
 	joystick.anchor_bottom = 1.0
-	joystick.offset_left = 104
-	joystick.offset_top = -236
-	joystick.offset_right = 276
-	joystick.offset_bottom = -64
+	joystick.offset_left = 0
+	joystick.offset_top = 0
+	joystick.offset_right = 0
+	joystick.offset_bottom = 0
 	controls_layer.add_child(joystick)
 
 	# Bottom-center contextual prompt & toast pill
@@ -521,6 +522,15 @@ func _build_settings_overlay() -> void:
 		gfx_btn.text = LocalizationManager.t("settings_graphics") + ": " + UIStyleHelper.quality_label_ar(nxt)
 	)
 	vbox.add_child(gfx_btn)
+
+	var dev_btn := Button.new()
+	dev_btn.text = "إعداد وتطوير: majnon.studio (إنستغرام)"
+	dev_btn.custom_minimum_size = Vector2(0, 48)
+	UIStyleHelper.style_button(dev_btn, UIStyleHelper.ACCENT_GOLD, 14, 16)
+	UIStyleHelper.apply_icon(dev_btn, "res://assets/icons/majnon_studio_logo.png", 26)
+	dev_btn.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	dev_btn.pressed.connect(func() -> void: OS.shell_open("https://www.instagram.com/majnon.studio?gwpx=MXZkZm41emg3emk0bA=="))
+	vbox.add_child(dev_btn)
 
 	var back_btn := Button.new()
 	back_btn.set_meta("loc_key", "menu_back")

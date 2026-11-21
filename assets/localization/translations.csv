@@ -29,14 +29,12 @@ settings_graphics,Graphics Quality,جودة الرسوم,
 settings_reset_progress,Reset All Progress,إعادة تعيين كل التقدم,
 settings_reset_confirm,Tap Again to Confirm Reset,اضغط مجدداً لتأكيد المسح,
 credits_body,"BEYOND THE DOOR — ما وراء الباب
-Built with Godot 4.x & GDScript.
-Offline single-player 3D puzzle exploration.
-Fonts: Noto Sans & Noto Sans Arabic (SIL OFL).
-Audio: Procedural atmospheric prototype assets.","ما وراء الباب — BEYOND THE DOOR
-مبنية بمحرك Godot 4.x ولغة GDScript.
+Developed by majnon.studio
+Offline single-player 3D puzzle exploration built with Godot 4.
+Fonts: Noto Sans & Noto Sans Arabic (SIL OFL).","ما وراء الباب — BEYOND THE DOOR
+تطوير استوديو: majnon.studio
 لعبة ألغاز واستكشاف ثلاثية الأبعاد تعمل دون اتصال.
-الخطوط: Noto Sans و Noto Sans Arabic.
-الصوتيات: مؤثرات وموسيقى نموذجية مولّدة.",
+الخطوط: Noto Sans و Noto Sans Arabic.",
 hud_echo,Echo,الصدى,
 hud_echo_rec,REC,تسجيل,
 hud_echo_play,ECHO,إعادة,
@@ -225,3 +223,5 @@ btn_skip_short,Skip,تخطي,
 btn_help_short,Help,شرح,
 stage_locked_prefix,Locked,مغلق,
 keys_label,Keys,المفاتيح,
+studio_by,Developed by majnon.studio,تطوير استوديو majnon.studio,
+studio_instagram_btn,Follow majnon.studio on Instagram,تابعنا على إنستغرام — majnon.studio,

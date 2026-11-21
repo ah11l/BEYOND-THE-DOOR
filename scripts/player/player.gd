@@ -1,24 +1,28 @@
 class_name PlayerController
 extends CharacterBody3D
 
-## Hooded protagonist controller with isometric camera-relative movement,
-## optional jump, local gravity field support, interaction detection, and Echo integration.
+## Responsive hooded protagonist controller with smooth analog isometric movement,
+## coyote time, jump buffering, subtle movement lean, gravity zone support, and Echo integration.
 
 signal interaction_target_changed(target: Node)
 signal interacted(target: Node)
 signal fell_into_void
 
-@export var move_speed: float = 5.4
-@export var acceleration: float = 22.0
-@export var deceleration: float = 26.0
-@export var jump_velocity: float = 6.4
-@export var base_gravity: float = 18.0
+@export var move_speed: float = 5.8
+@export var acceleration: float = 28.0
+@export var air_acceleration: float = 16.0
+@export var deceleration: float = 30.0
+@export var jump_velocity: float = 6.8
+@export var base_gravity: float = 18.5
 @export var void_y_threshold: float = -10.0
+
+const COYOTE_TIME := 0.14
+const JUMP_BUFFER_TIME := 0.14
 
 var gravity_scale: float = 1.0
 var upward_lift: float = 0.0
-var current_world_side: int = 0 # 0 = Primary, 1 = Alternate (Black Door)
-var active_room_state: int = 0  # 0 = State A, 1 = State B (Purple Door)
+var current_world_side: int = 0
+var active_room_state: int = 0
 var movement_locked: bool = false
 
 var _rig: Node3D
@@ -28,11 +32,13 @@ var _nearby_interactables: Array[Node] = []
 var _current_target: Node = null
 var _bob_time: float = 0.0
 var _camera_ref: Camera3D = null
+var _coyote_timer: float = 0.0
+var _jump_buffer_timer: float = 0.0
 
 
 func _ready() -> void:
-	collision_layer = 2 # Layer 2: Player
-	collision_mask = 1 | 16 # Layer 1: World, Layer 5: Pushable
+	collision_layer = 2
+	collision_mask = 1 | 16
 
 	_rig = LowPolyMeshLibrary.build_hooded_character(false)
 	add_child(_rig)
@@ -45,7 +51,7 @@ func _ready() -> void:
 		_interact_area.body_entered.connect(_on_interact_area_entered)
 		_interact_area.body_exited.connect(_on_interact_area_exited)
 
-	GameState.touch_jump_pressed.connect(_try_jump)
+	GameState.touch_jump_pressed.connect(_queue_jump)
 	GameState.touch_interact_pressed.connect(_try_interact)
 
 
@@ -63,43 +69,67 @@ func reset_gravity_zone() -> void:
 	upward_lift = 0.0
 
 
+func _queue_jump() -> void:
+	if movement_locked:
+		return
+	_jump_buffer_timer = JUMP_BUFFER_TIME
+
+
 func _physics_process(delta: float) -> void:
 	if movement_locked:
 		velocity = Vector3.ZERO
 		move_and_slide()
 		return
 
-	# Gravity / Blue Door low-gravity or upward lift
+	# Coyote time & jump buffer timers for crisp, forgiving platforming
+	if is_on_floor():
+		_coyote_timer = COYOTE_TIME
+	else:
+		_coyote_timer = maxf(0.0, _coyote_timer - delta)
+
+	if Input.is_action_just_pressed("jump"):
+		_queue_jump()
+	if _jump_buffer_timer > 0.0:
+		_jump_buffer_timer = maxf(0.0, _jump_buffer_timer - delta)
+
+	# Gravity / Blue Door upward lift
 	if upward_lift > 0.0:
-		velocity.y = move_toward(velocity.y, upward_lift, base_gravity * 0.7 * delta)
+		velocity.y = move_toward(velocity.y, upward_lift, base_gravity * 0.75 * delta)
 	elif not is_on_floor():
 		velocity.y -= base_gravity * gravity_scale * delta
 	elif velocity.y < 0.0:
 		velocity.y = -0.1
 
-	# Read combined keyboard + mobile touch joystick input
+	# Execute buffered jump if grounded or within coyote window
+	if _jump_buffer_timer > 0.0 and _coyote_timer > 0.0:
+		var mult := 1.45 if gravity_scale < 0.7 else 1.0
+		velocity.y = jump_velocity * mult
+		_coyote_timer = 0.0
+		_jump_buffer_timer = 0.0
+
+	# Combined keyboard + floating touchpad analog input
 	var input_vec := _get_move_input()
 	var move_dir := _to_isometric_direction(input_vec)
+	var accel := acceleration if is_on_floor() else air_acceleration
 
-	if move_dir.length_squared() > 0.01:
-		velocity.x = move_toward(velocity.x, move_dir.x * move_speed, acceleration * delta)
-		velocity.z = move_toward(velocity.z, move_dir.z * move_speed, acceleration * delta)
+	if move_dir.length_squared() > 0.004:
+		var desired := move_dir * move_speed
+		velocity.x = move_toward(velocity.x, desired.x, accel * delta)
+		velocity.z = move_toward(velocity.z, desired.z, accel * delta)
 		var target_yaw := atan2(-move_dir.x, -move_dir.z)
-		rotation.y = lerp_angle(rotation.y, target_yaw, minf(1.0, 12.0 * delta))
-		_bob_time += delta * 10.0
+		rotation.y = lerp_angle(rotation.y, target_yaw, minf(1.0, 15.0 * delta))
+		_bob_time += delta * (7.0 + move_dir.length() * 5.0)
 	else:
 		velocity.x = move_toward(velocity.x, 0.0, deceleration * delta)
 		velocity.z = move_toward(velocity.z, 0.0, deceleration * delta)
 		_bob_time += delta * 2.0
 
-	if Input.is_action_just_pressed("jump"):
-		_try_jump()
 	if Input.is_action_just_pressed("interact"):
 		_try_interact()
 
 	move_and_slide()
 	_handle_pushable_collisions()
-	_animate_character()
+	_animate_character(delta)
 	_refresh_closest_interactable()
 
 	if global_position.y < void_y_threshold:
@@ -128,21 +158,12 @@ func _to_isometric_direction(input_vec: Vector2) -> Vector3:
 		right.y = 0.0
 		right = right.normalized()
 		return (right * input_vec.x - forward * input_vec.y).normalized() * input_vec.length()
-	# Fallback 45-degree isometric basis
 	var angle := deg_to_rad(45.0)
 	var cos_a := cos(angle)
 	var sin_a := sin(angle)
 	var wx := input_vec.x * cos_a - input_vec.y * sin_a
 	var wz := input_vec.x * sin_a + input_vec.y * cos_a
 	return Vector3(wx, 0.0, wz)
-
-
-func _try_jump() -> void:
-	if movement_locked:
-		return
-	if is_on_floor():
-		var mult := 1.45 if gravity_scale < 0.7 else 1.0
-		velocity.y = jump_velocity * mult
 
 
 func _try_interact() -> void:
@@ -166,14 +187,17 @@ func _handle_pushable_collisions() -> void:
 				collider.apply_push(push_dir.normalized())
 
 
-func _animate_character() -> void:
+func _animate_character(delta: float) -> void:
 	if _rig == null:
 		return
 	var horiz_speed := Vector2(velocity.x, velocity.z).length()
-	var bob_amp := 0.045 if horiz_speed > 0.3 else 0.015
+	var speed_ratio := clampf(horiz_speed / move_speed, 0.0, 1.0)
+	var bob_amp := lerpf(0.015, 0.055, speed_ratio)
 	_rig.position.y = absf(sin(_bob_time)) * bob_amp
+	# Gentle forward lean when moving for lively, responsive feel
+	_rig.rotation.x = lerpf(_rig.rotation.x, -0.11 * speed_ratio, minf(1.0, 10.0 * delta))
 	if _lantern_holder != null:
-		_lantern_holder.rotation.z = sin(_bob_time * 0.7) * 0.10
+		_lantern_holder.rotation.z = sin(_bob_time * 0.75) * (0.08 + 0.08 * speed_ratio)
 
 
 func _on_interact_area_entered(node: Node) -> void:

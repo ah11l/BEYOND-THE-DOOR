@@ -2,7 +2,6 @@ class_name TranslationsData
 extends RefCounted
 
 ## Embedded bilingual translation tables (compiled from translations.csv).
-## Guaranteed to work inside exported Android .pck archives without external CSV import issues.
 
 const TABLES := {
 	"en": {
@@ -35,7 +34,7 @@ const TABLES := {
 		"settings_graphics": "Graphics Quality",
 		"settings_reset_progress": "Reset All Progress",
 		"settings_reset_confirm": "Tap Again to Confirm Reset",
-		"credits_body": "BEYOND THE DOOR — ما وراء الباب\nBuilt with Godot 4.x & GDScript.\nOffline single-player 3D puzzle exploration.\nFonts: Noto Sans & Noto Sans Arabic (SIL OFL).\nAudio: Procedural atmospheric prototype assets.",
+		"credits_body": "BEYOND THE DOOR — ما وراء الباب\nDeveloped by majnon.studio\nOffline single-player 3D puzzle exploration built with Godot 4.\nFonts: Noto Sans & Noto Sans Arabic (SIL OFL).",
 		"hud_echo": "Echo",
 		"hud_echo_rec": "REC",
 		"hud_echo_play": "ECHO",
@@ -224,6 +223,8 @@ const TABLES := {
 		"btn_help_short": "Help",
 		"stage_locked_prefix": "Locked",
 		"keys_label": "Keys",
+		"studio_by": "Developed by majnon.studio",
+		"studio_instagram_btn": "Follow majnon.studio on Instagram",
 	},
 	"ar": {
 		"game_tagline": "عوالم عائمة. ألغاز هادئة. أبواب منسية.",
@@ -255,7 +256,7 @@ const TABLES := {
 		"settings_graphics": "جودة الرسوم",
 		"settings_reset_progress": "إعادة تعيين كل التقدم",
 		"settings_reset_confirm": "اضغط مجدداً لتأكيد المسح",
-		"credits_body": "ما وراء الباب — BEYOND THE DOOR\nمبنية بمحرك Godot 4.x ولغة GDScript.\nلعبة ألغاز واستكشاف ثلاثية الأبعاد تعمل دون اتصال.\nالخطوط: Noto Sans و Noto Sans Arabic.\nالصوتيات: مؤثرات وموسيقى نموذجية مولّدة.",
+		"credits_body": "ما وراء الباب — BEYOND THE DOOR\nتطوير استوديو: majnon.studio\nلعبة ألغاز واستكشاف ثلاثية الأبعاد تعمل دون اتصال.\nالخطوط: Noto Sans و Noto Sans Arabic.",
 		"hud_echo": "الصدى",
 		"hud_echo_rec": "تسجيل",
 		"hud_echo_play": "إعادة",
@@ -444,5 +445,7 @@ const TABLES := {
 		"btn_help_short": "شرح",
 		"stage_locked_prefix": "مغلق",
 		"keys_label": "المفاتيح",
+		"studio_by": "تطوير استوديو majnon.studio",
+		"studio_instagram_btn": "تابعنا على إنستغرام — majnon.studio",
 	},
 }
