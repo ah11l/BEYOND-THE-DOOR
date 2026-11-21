@@ -9,7 +9,7 @@ config/name="Beyond the Door — ما وراء الباب"
 config/description="Atmospheric 3D low-poly isometric puzzle-exploration game for Android."
 run/main_scene="res://scenes/main/main_menu.tscn"
 config/features=PackedStringArray("4.5", "GL Compatibility")
-config/icon="res://icon.svg"
+config/icon="res://assets/icons/app_icon_512.png"
 
 [audio]
 
