@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1026"/>
+      <stop offset="55%" stop-color="#1d1b4b"/>
+      <stop offset="100%" stop-color="#3a2359"/>
+    </linearGradient>
+    <linearGradient id="doorGlow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fff4c4"/>
+      <stop offset="50%" stop-color="#ffbf47"/>
+      <stop offset="100%" stop-color="#ff8c2e"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="50%" cy="48%" r="42%">
+      <stop offset="0%" stop-color="#ffca57" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#ffca57" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <circle cx="256" cy="245" r="200" fill="url(#halo)"/>
+  <circle cx="96" cy="110" r="3" fill="#dbeafe" opacity="0.8"/>
+  <circle cx="412" cy="96" r="4" fill="#fde68a" opacity="0.9"/>
+  <circle cx="385" cy="168" r="2.5" fill="#93c5fd" opacity="0.7"/>
+  <circle cx="128" cy="186" r="2.5" fill="#c4b5fd" opacity="0.75"/>
+  <!-- Floating island -->
+  <polygon points="108,358 256,312 404,358 256,416" fill="#6f5a9e"/>
+  <polygon points="108,358 256,416 256,462 152,412" fill="#3a2d66"/>
+  <polygon points="404,358 256,416 256,462 360,412" fill="#281f4d"/>
+  <!-- Golden Door frame -->
+  <rect x="192" y="132" width="128" height="218" rx="6" fill="#4b2e2a"/>
+  <rect x="204" y="144" width="104" height="206" fill="url(#doorGlow)"/>
+  <!-- Star cutout -->
+  <polygon points="256,214 265,238 290,238 270,253 277,277 256,262 235,277 242,253 222,238 247,238" fill="#ffffff"/>
+  <!-- Cyan lantern dot -->
+  <circle cx="168" cy="330" r="14" fill="#38e8ff"/>
+  <circle cx="168" cy="330" r="24" fill="#38e8ff" opacity="0.28"/>
+</svg>

@@ -1,0 +1,16 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/echo/echo_ghost.gd" id="1_ghost"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_echo"]
+radius = 0.34
+height = 1.24
+
+[node name="EchoGhost" type="CharacterBody3D"]
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("1_ghost")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.62, 0)
+shape = SubResource("CapsuleShape3D_echo")

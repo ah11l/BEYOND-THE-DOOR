@@ -1,0 +1,5 @@
+<!-- Add this meta-data inside the <application> tag of android/build/AndroidManifest.xml
+     after installing the Poing Studios Godot AdMob Plugin and enabling Gradle Build: -->
+<meta-data
+    android:name="com.google.android.gms.ads.APPLICATION_ID"
+    android:value="ca-app-pub-2956752840406313~2454089044" />
