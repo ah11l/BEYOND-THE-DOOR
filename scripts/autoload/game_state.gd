@@ -8,7 +8,11 @@ signal touch_interact_pressed
 signal touch_echo_pressed
 signal graphics_quality_changed(quality: String)
 
-const SECRET_ENDING_REQUIRED_SECRETS := 18
+const TOTAL_STAGES := 120
+const POWER_INSIGHT_CRYSTALS := 10
+const POWER_ECHO_CRYSTALS := 25
+const POWER_STRIDE_CRYSTALS := 45
+const SECRET_ENDING_REQUIRED_SECRETS := 60
 const SCENE_MAIN_MENU := "res://scenes/main/main_menu.tscn"
 const SCENE_STAGE := "res://scenes/game/stage_scene.tscn"
 const SCENE_ENDING := "res://scenes/ui/ending_screen.tscn"
@@ -58,7 +62,7 @@ func _do_change_scene(path: String) -> void:
 
 
 func start_stage(stage_id: int) -> void:
-	current_stage_id = clampi(stage_id, 1, 30)
+	current_stage_id = clampi(stage_id, 1, TOTAL_STAGES)
 	SaveManager.set_last_played_stage(current_stage_id)
 	_safe_change_scene(SCENE_STAGE)
 
@@ -70,7 +74,7 @@ func go_to_main_menu() -> void:
 func trigger_ending(ending_id: String) -> void:
 	active_ending_id = ending_id
 	SaveManager.unlock_ending(ending_id)
-	SaveManager.mark_stage_completed(30)
+	SaveManager.mark_stage_completed(TOTAL_STAGES)
 	_safe_change_scene(SCENE_ENDING)
 
 
@@ -93,3 +97,15 @@ func emit_touch_interact() -> void:
 
 func emit_touch_echo() -> void:
 	touch_echo_pressed.emit()
+
+
+func has_lantern_insight() -> bool:
+	return SaveManager.get_collected_secret_count() >= POWER_INSIGHT_CRYSTALS
+
+
+func get_echo_duration() -> float:
+	return 7.0 if SaveManager.get_collected_secret_count() >= POWER_ECHO_CRYSTALS else 5.0
+
+
+func get_move_speed_multiplier() -> float:
+	return 1.15 if SaveManager.get_collected_secret_count() >= POWER_STRIDE_CRYSTALS else 1.0

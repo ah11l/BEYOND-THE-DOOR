@@ -465,15 +465,19 @@ func _show_stage_select_modal() -> void:
 		w_lbl.add_theme_color_override("font_color", UIStyleHelper.ACCENT_CYAN)
 		_modal_body.add_child(w_lbl)
 
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 8)
-		_modal_body.add_child(row)
+		var grid := GridContainer.new()
+		grid.columns = 5
+		grid.add_theme_constant_override("h_separation", 8)
+		grid.add_theme_constant_override("v_separation", 8)
+		_modal_body.add_child(grid)
 
-		for offset in range(5):
-			var sid := (w - 1) * 5 + offset + 1
+		var w_start := (w - 1) * 20 + 1
+		var w_count := 20
+		for offset in range(w_count):
+			var sid := w_start + offset
 			var unlocked := SaveManager.is_stage_unlocked(sid)
 			var done := SaveManager.is_stage_completed(sid)
-			var mem := SaveManager.is_secret_collected("mem_%02d" % sid)
+			var mem := SaveManager.is_secret_collected("mem_%03d" % sid)
 			var btn := Button.new()
 			btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			btn.custom_minimum_size = Vector2(0, 54)
@@ -481,13 +485,13 @@ func _show_stage_select_modal() -> void:
 			btn.disabled = not unlocked
 			UIStyleHelper.style_button(btn, UIStyleHelper.ACCENT_GOLD if done else UIStyleHelper.BORDER_SUBTLE, 14, 17)
 			btn.pressed.connect(func() -> void: GameState.start_stage(sid))
-			row.add_child(btn)
+			grid.add_child(btn)
 
 
 func _show_memories_modal() -> void:
 	AudioManager.play_sfx("ui_click")
 	_clear_modal_body()
-	_modal_title.text = "%s (%d / 30)" % [LocalizationManager.t("menu_memories"), SaveManager.get_collected_secret_count()]
+	_modal_title.text = "%s (%d / 120)" % [LocalizationManager.t("menu_memories"), SaveManager.get_collected_secret_count()]
 	_modal_container.visible = true
 
 	var hint := Label.new()
@@ -496,11 +500,11 @@ func _show_memories_modal() -> void:
 	hint.add_theme_color_override("font_color", UIStyleHelper.ACCENT_GOLD)
 	_modal_body.add_child(hint)
 
-	for s in range(1, 31):
-		var found := SaveManager.is_secret_collected("mem_%02d" % s)
+	for s in range(1, 121):
+		var found := SaveManager.is_secret_collected("mem_%03d" % s)
 		var lbl := Label.new()
 		lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		lbl.text = ("◆ #%02d — %s" % [s, LocalizationManager.t("lore_%02d" % s)]) if found else ("◇ #%02d — %s" % [s, LocalizationManager.t("memory_locked")])
+		lbl.text = ("◆ #%03d — %s" % [s, LocalizationManager.t("lore_%03d" % s)]) if found else ("◇ #%03d — %s" % [s, LocalizationManager.t("memory_locked")])
 		lbl.add_theme_color_override("font_color", UIStyleHelper.TEXT_PRIMARY if found else UIStyleHelper.TEXT_MUTED)
 		_modal_body.add_child(lbl)
 
@@ -592,7 +596,7 @@ func _refresh_texts() -> void:
 		hero.text = "ما وراء الباب" if LocalizationManager.is_rtl() else "BEYOND THE DOOR"
 	var cpill := find_child("CrystalPill", true, false) as Button
 	if cpill != null:
-		cpill.text = " %d / 30" % SaveManager.get_collected_secret_count()
+		cpill.text = " %d / 120" % SaveManager.get_collected_secret_count()
 
 
 func _apply_loc(node: Node) -> void:

@@ -48,12 +48,17 @@ func _ready() -> void:
 	_build_stage_geometry()
 	_setup_player_and_camera()
 	_setup_hud_and_echo()
+	_build_energy_conduits()
 	_apply_room_state(0)
 	_evaluate_door_conditions()
 
 	# Show stage clue/intro hint toast if present
 	var intro_hint := str(stage_def.get("hint_key", ""))
-	if not intro_hint.is_empty():
+	# Show World Chapter Story Card on the first stage of each world
+	var world_starts := {1: "world_1_story", 21: "world_2_story", 41: "world_3_story", 61: "world_4_story", 81: "world_5_story", 101: "world_6_story"}
+	if world_starts.has(stage_id):
+		_hud.show_toast(str(world_starts[stage_id]), 7.5)
+	elif not intro_hint.is_empty():
 		_hud.show_toast(intro_hint, 5.5)
 
 
@@ -111,6 +116,11 @@ func _setup_environment() -> void:
 	blue_rim.shadow_enabled = false
 	add_child(blue_rim)
 	_spawn_3d_starfield(110)
+	_spawn_ambient_motes(64)
+	var halo := LowPolyMeshLibrary.create_celestial_ring(26.0, world_palette["accent"] as Color)
+	halo.position = Vector3(2.0, 5.5, -18.0)
+	halo.rotation_degrees = Vector3(68.0, 22.0, 12.0)
+	_world_root.add_child(halo)
 
 
 func _build_stage_geometry() -> void:
@@ -207,6 +217,18 @@ func _build_stage_geometry() -> void:
 				node = LowPolyMeshLibrary.create_crystal_cluster(Color(0.28, 0.86, 1.0))
 			"rock":
 				node = LowPolyMeshLibrary.create_rock(side_col.lightened(0.15), float(prop.get("scale", 1.0)))
+			"arch":
+				node = LowPolyMeshLibrary.create_scenic_arch(side_col.lightened(0.22), accent_col)
+			"spire":
+				node = LowPolyMeshLibrary.create_crystal_spire(accent_col)
+			"monolith", "shrine":
+				node = LowPolyMeshLibrary.create_floating_monolith(side_col.lightened(0.18), accent_col)
+			"arch":
+				node = LowPolyMeshLibrary.create_scenic_arch(side_col.lightened(0.22), accent_col)
+			"spire":
+				node = LowPolyMeshLibrary.create_crystal_spire(accent_col)
+			"monolith", "shrine":
+				node = LowPolyMeshLibrary.create_floating_monolith(side_col.lightened(0.18), accent_col)
 		if node != null:
 			node.position = p_pos
 			node.rotation_degrees.y = float(prop.get("rot_y", 0.0))
@@ -499,7 +521,19 @@ func _on_checkpoint_reached(cp_id: String, spawn_pos: Vector3) -> void:
 
 
 func _on_secret_collected(_secret_id: String, lore_key: String) -> void:
-	_hud.show_toast(lore_key, 6.0)
+	var total := SaveManager.get_collected_secret_count()
+	if total == GameState.POWER_INSIGHT_CRYSTALS:
+		_hud.show_toast("power_insight_unlocked", 6.5)
+	elif total == GameState.POWER_ECHO_CRYSTALS:
+		_hud.show_toast("power_echo_unlocked", 6.5)
+	elif total == GameState.POWER_STRIDE_CRYSTALS:
+		_hud.show_toast("power_stride_unlocked", 6.5)
+	elif total == GameState.POWER_STRIDE_CRYSTALS:
+		_hud.show_toast("power_stride_unlocked", 6.5)
+	elif total == GameState.SECRET_ENDING_REQUIRED_SECRETS:
+		_hud.show_toast("power_secret_unlocked", 6.5)
+	else:
+		_hud.show_toast(lore_key, 6.5)
 
 
 func _on_player_fell() -> void:
@@ -547,7 +581,7 @@ func _on_stage_completed(door: GoldenDoor) -> void:
 	tw.tween_interval(0.55)
 	tw.tween_property(flash, "color:a", 1.0, 0.65).set_trans(Tween.TRANS_CUBIC)
 	tw.tween_callback(func() -> void:
-		if stage_id < 30:
+		if stage_id < GameState.TOTAL_STAGES:
 			GameState.start_stage(stage_id + 1)
 	)
 
@@ -610,3 +644,60 @@ func _on_ad_reward_granted(placement: String) -> void:
 
 func _on_ad_unavailable(_placement: String, reason_key: String) -> void:
 	_hud.show_toast(reason_key, 3.8)
+
+
+func _build_energy_conduits() -> void:
+	## Draws subtle glowing energy wires on the ground linking each Pressure Plate to its target Bridge or Golden Door
+	## so puzzle causality is 100% visually readable.
+	var wire_mat := LowPolyMeshLibrary.make_flat_material(Color(0.28, 0.86, 1.0), 0.3, Color(0.28, 0.86, 1.0), 1.4)
+	for pid in _plates.keys():
+		var pl: PressurePlate = _plates[pid]
+		var targets: Array[Vector3] = []
+		if _plate_bridges.has(pid):
+			for entry in (_plate_bridges[pid] as Array):
+				var n := entry["node"] as Node3D
+				if n != null:
+					targets.append(n.position)
+		elif _golden_door != null:
+			targets.append(_golden_door.position)
+		for tp in targets:
+			var a := Vector3(pl.position.x, pl.position.y + 0.04, pl.position.z)
+			var b := Vector3(tp.x, tp.y + 0.04, tp.z)
+			var diff := b - a
+			var dist := diff.length()
+			if dist < 0.5:
+				continue
+			var beam := MeshInstance3D.new()
+			var box := BoxMesh.new()
+			box.size = Vector3(0.08, 0.03, dist)
+			beam.mesh = box
+			beam.position = (a + b) * 0.5
+			beam.rotation.y = atan2(diff.x, diff.z)
+			beam.material_override = wire_mat
+			_world_root.add_child(beam)
+
+
+func _spawn_ambient_motes(count: int) -> void:
+	## Single-draw-call floating golden/cyan stardust motes for rich living atmosphere.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = stage_id * 97 + 5
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = Color(1.0, 0.88, 0.56)
+	var sph := SphereMesh.new()
+	sph.radius = 0.055
+	sph.height = 0.11
+	sph.radial_segments = 4
+	sph.rings = 2
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = sph
+	mm.instance_count = count
+	for i in range(count):
+		var pos := Vector3(rng.randf_range(-10.0, 14.0), rng.randf_range(0.5, 6.0), rng.randf_range(-9.0, 9.0))
+		var sc := rng.randf_range(0.6, 1.4)
+		mm.set_instance_transform(i, Transform3D(Basis.from_scale(Vector3(sc, sc, sc)), pos))
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = mm
+	mmi.material_override = mat
+	_world_root.add_child(mmi)

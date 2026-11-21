@@ -428,3 +428,86 @@ static func create_grass_tuft(color: Color = Color(0.36, 0.30, 0.54)) -> Node3D:
 		blade.material_override = mat
 		root.add_child(blade)
 	return root
+
+
+static func create_scenic_arch(stone_color: Color, glow_color: Color) -> Node3D:
+	## Ancient floating stone archway with glowing celestial keystone.
+	var root := Node3D.new()
+	var s_mat := make_flat_material(stone_color, 0.82)
+	var g_mat := make_flat_material(glow_color, 0.2, glow_color, 1.8)
+	for sx in [-1.05, 1.05]:
+		var col := MeshInstance3D.new()
+		var b := BoxMesh.new()
+		b.size = Vector3(0.32, 2.4, 0.32)
+		col.mesh = b
+		col.position = Vector3(sx, 1.2, 0.0)
+		col.material_override = s_mat
+		root.add_child(col)
+	var top := MeshInstance3D.new()
+	var tb := BoxMesh.new()
+	tb.size = Vector3(2.55, 0.30, 0.38)
+	top.mesh = tb
+	top.position = Vector3(0.0, 2.48, 0.0)
+	top.material_override = s_mat
+	root.add_child(top)
+	var gem := MeshInstance3D.new()
+	var sph := SphereMesh.new()
+	sph.radius = 0.22
+	sph.height = 0.44
+	sph.radial_segments = 6
+	sph.rings = 3
+	gem.mesh = sph
+	gem.position = Vector3(0.0, 2.86, 0.0)
+	gem.material_override = g_mat
+	root.add_child(gem)
+	return root
+
+
+static func create_crystal_spire(color: Color) -> Node3D:
+	## Tall glowing low-poly crystal obelisk for scenic sky vistas.
+	var root := Node3D.new()
+	var mat := make_flat_material(color, 0.18, color, 1.7)
+	var main := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.02
+	cyl.bottom_radius = 0.34
+	cyl.height = 2.35
+	cyl.radial_segments = 5
+	main.mesh = cyl
+	main.position = Vector3(0.0, 1.18, 0.0)
+	main.material_override = mat
+	root.add_child(main)
+	return root
+
+
+static func create_floating_monolith(stone_color: Color, rune_color: Color) -> Node3D:
+	## Hovering ancient obelisk with glowing carved band.
+	var root := Node3D.new()
+	var m := MeshInstance3D.new()
+	var b := BoxMesh.new()
+	b.size = Vector3(0.58, 2.1, 0.58)
+	m.mesh = b
+	m.position = Vector3(0.0, 1.35, 0.0)
+	m.material_override = make_flat_material(stone_color, 0.85)
+	root.add_child(m)
+	var band := MeshInstance3D.new()
+	var bb := BoxMesh.new()
+	bb.size = Vector3(0.64, 0.18, 0.64)
+	band.mesh = bb
+	band.position = Vector3(0.0, 1.45, 0.0)
+	band.material_override = make_flat_material(rune_color, 0.2, rune_color, 2.0)
+	root.add_child(band)
+	return root
+
+
+static func create_celestial_ring(radius: float, color: Color) -> MeshInstance3D:
+	## Giant luminous halo ring framing the distant starry horizon.
+	var ring := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = radius - 0.18
+	torus.outer_radius = radius + 0.18
+	torus.rings = 32
+	torus.ring_segments = 8
+	ring.mesh = torus
+	ring.material_override = make_flat_material(color, 0.2, color, 1.35)
+	return ring

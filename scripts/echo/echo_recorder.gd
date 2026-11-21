@@ -51,9 +51,10 @@ func _physics_process(delta: float) -> void:
 				"room_state": player.active_room_state,
 			})
 			_record_elapsed += delta
-			var ratio := clampf(_record_elapsed / MAX_RECORD_SECONDS, 0.0, 1.0)
+			var max_dur := GameState.get_echo_duration()
+			var ratio := clampf(_record_elapsed / max_dur, 0.0, 1.0)
 			state_changed.emit(state, ratio)
-			if _record_elapsed >= MAX_RECORD_SECONDS:
+			if _record_elapsed >= max_dur:
 				stop_and_replay()
 		EchoState.REPLAYING:
 			_replay_elapsed += delta

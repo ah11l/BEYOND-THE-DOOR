@@ -79,8 +79,8 @@ func _merge_with_defaults(loaded: Dictionary) -> Dictionary:
 			else:
 				merged[key] = loaded[key]
 	# Clamp stage bounds defensively
-	merged["highest_unlocked_stage"] = clampi(int(merged["highest_unlocked_stage"]), 1, 30)
-	merged["last_played_stage"] = clampi(int(merged["last_played_stage"]), 1, 30)
+	merged["highest_unlocked_stage"] = clampi(int(merged["highest_unlocked_stage"]), 1, 120)
+	merged["last_played_stage"] = clampi(int(merged["last_played_stage"]), 1, 120)
 	return merged
 
 
@@ -125,7 +125,7 @@ func mark_stage_completed(stage_id: int) -> void:
 	if not is_stage_completed(stage_id):
 		completed.append(stage_id)
 		data["completed_stages"] = completed
-	var next_stage := clampi(stage_id + 1, 1, 30)
+	var next_stage := clampi(stage_id + 1, 1, 120)
 	if next_stage > int(data.get("highest_unlocked_stage", 1)):
 		data["highest_unlocked_stage"] = next_stage
 	data["last_played_stage"] = next_stage
@@ -138,7 +138,7 @@ func mark_stage_completed(stage_id: int) -> void:
 
 
 func set_last_played_stage(stage_id: int) -> void:
-	data["last_played_stage"] = clampi(stage_id, 1, 30)
+	data["last_played_stage"] = clampi(stage_id, 1, 120)
 	save_game()
 
 

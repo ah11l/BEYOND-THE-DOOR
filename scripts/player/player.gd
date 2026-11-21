@@ -113,7 +113,7 @@ func _physics_process(delta: float) -> void:
 	var accel := acceleration if is_on_floor() else air_acceleration
 
 	if move_dir.length_squared() > 0.004:
-		var desired := move_dir * move_speed
+		var desired := move_dir * (move_speed * GameState.get_move_speed_multiplier())
 		velocity.x = move_toward(velocity.x, desired.x, accel * delta)
 		velocity.z = move_toward(velocity.z, desired.z, accel * delta)
 		var target_yaw := atan2(-move_dir.x, -move_dir.z)

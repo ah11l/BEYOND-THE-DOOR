@@ -50,7 +50,7 @@ func _build_ui() -> void:
 
 	var unlocked_count := (SaveManager.data.get("unlocked_endings", []) as Array).size()
 	var summary := Label.new()
-	summary.text = "%s: %d / 3   •   %s: %d / 30" % [
+	summary.text = "%s: %d / 3   •   %s: %d / 120" % [
 		LocalizationManager.t("endings_unlocked_label"),
 		unlocked_count,
 		LocalizationManager.t("menu_memories"),
@@ -70,7 +70,7 @@ func _build_ui() -> void:
 	replay_btn.text = LocalizationManager.t("ending_replay_finale")
 	replay_btn.custom_minimum_size = Vector2(220, 52)
 	UIStyleHelper.style_button(replay_btn, UIStyleHelper.ACCENT_CYAN)
-	replay_btn.pressed.connect(func() -> void: GameState.start_stage(30))
+	replay_btn.pressed.connect(func() -> void: GameState.start_stage(120))
 	btn_row.add_child(replay_btn)
 
 	var menu_btn := Button.new()

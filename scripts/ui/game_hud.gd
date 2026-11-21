@@ -66,7 +66,7 @@ func set_stage_info(stage_id: int, title_key: String, objective_key: String) -> 
 	_current_objective_key = objective_key
 	_refresh_labels()
 	if _skip_btn != null:
-		_skip_btn.visible = (stage_id < 30)
+		_skip_btn.visible = (stage_id < GameState.TOTAL_STAGES)
 	# Auto-open Arabic/English interactive tutorial on Stage 1 if not seen yet
 	if stage_id == 1 and not bool(SaveManager.get_setting("tutorial_seen", false)):
 		open_tutorial()
@@ -95,7 +95,7 @@ func update_echo_state(echo_state: int, progress: float) -> void:
 		return
 	match echo_state:
 		EchoRecorder.EchoState.RECORDING:
-			var secs := EchoRecorder.MAX_RECORD_SECONDS * (1.0 - progress)
+			var secs := GameState.get_echo_duration() * (1.0 - progress)
 			_echo_btn.text = "%s\n%.1fs" % [LocalizationManager.t("hud_echo_rec"), secs]
 			UIStyleHelper.style_circle_button(_echo_btn, 100, Color(1.0, 0.38, 0.45), 17)
 		EchoRecorder.EchoState.REPLAYING:
@@ -581,15 +581,19 @@ func _open_stage_select() -> void:
 		w_lbl.add_theme_color_override("font_color", UIStyleHelper.ACCENT_CYAN)
 		list.add_child(w_lbl)
 
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 8)
-		list.add_child(row)
+		var grid := GridContainer.new()
+		grid.columns = 5
+		grid.add_theme_constant_override("h_separation", 8)
+		grid.add_theme_constant_override("v_separation", 8)
+		list.add_child(grid)
 
-		for offset in range(5):
-			var sid := (w - 1) * 5 + offset + 1
+		var w_start := (w - 1) * 20 + 1
+		var w_count := 20
+		for offset in range(w_count):
+			var sid := w_start + offset
 			var unlocked := SaveManager.is_stage_unlocked(sid)
 			var completed := SaveManager.is_stage_completed(sid)
-			var secret_done := SaveManager.is_secret_collected("mem_%02d" % sid)
+			var secret_done := SaveManager.is_secret_collected("mem_%03d" % sid)
 			var btn := Button.new()
 			btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			btn.custom_minimum_size = Vector2(0, 56)
@@ -599,7 +603,7 @@ func _open_stage_select() -> void:
 			btn.disabled = not unlocked
 			UIStyleHelper.style_button(btn, UIStyleHelper.ACCENT_GOLD if completed else UIStyleHelper.BORDER_SUBTLE, 12, 18)
 			btn.pressed.connect(func() -> void: GameState.start_stage(sid))
-			row.add_child(btn)
+			grid.add_child(btn)
 
 	var close_btn := Button.new()
 	close_btn.text = LocalizationManager.t("menu_close")
@@ -628,7 +632,7 @@ func _open_codex() -> void:
 		c.queue_free()
 
 	var hdr := Label.new()
-	hdr.text = "%s (%d / 30)" % [LocalizationManager.t("menu_memories"), SaveManager.get_collected_secret_count()]
+	hdr.text = "%s (%d / 120)" % [LocalizationManager.t("menu_memories"), SaveManager.get_collected_secret_count()]
 	hdr.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hdr.add_theme_font_size_override("font_size", 24)
 	hdr.add_theme_color_override("font_color", UIStyleHelper.ACCENT_CYAN)
@@ -643,17 +647,17 @@ func _open_codex() -> void:
 	list.add_theme_constant_override("separation", 8)
 	scroll.add_child(list)
 
-	for s in range(1, 31):
-		var mem_id := "mem_%02d" % s
+	for s in range(1, 121):
+		var mem_id := "mem_%03d" % s
 		var found := SaveManager.is_secret_collected(mem_id)
 		var lbl := Label.new()
 		lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		lbl.add_theme_font_size_override("font_size", 16)
 		if found:
-			lbl.text = "◆ #%02d — %s" % [s, LocalizationManager.t("lore_%02d" % s)]
+			lbl.text = "◆ #%03d — %s" % [s, LocalizationManager.t("lore_%03d" % s)]
 			lbl.add_theme_color_override("font_color", UIStyleHelper.TEXT_PRIMARY)
 		else:
-			lbl.text = "◇ #%02d — %s" % [s, LocalizationManager.t("memory_locked")]
+			lbl.text = "◇ #%03d — %s" % [s, LocalizationManager.t("memory_locked")]
 			lbl.add_theme_color_override("font_color", UIStyleHelper.TEXT_MUTED)
 		list.add_child(lbl)
 
@@ -741,7 +745,7 @@ func _apply_meta_localization(node: Node) -> void:
 func _refresh_counters() -> void:
 	var cbtn := _root.find_child("CrystalBtn", true, false) as Button
 	if cbtn != null:
-		cbtn.text = " %d / 30" % SaveManager.get_collected_secret_count()
+		cbtn.text = " %d / 120" % SaveManager.get_collected_secret_count()
 
 
 func _exit_tree() -> void:

@@ -12,6 +12,7 @@ signal stage_exit_requested(door: GoldenDoor)
 var _collected_keys: int = 0
 var _active_switches: int = 0
 var _exit_triggered: bool = false
+var _status_badge: Label3D = null
 
 
 func _ready() -> void:
@@ -37,12 +38,24 @@ func _ready() -> void:
 	walk_area.body_entered.connect(_on_player_walked_in)
 	add_child(walk_area)
 
+	# Clear 3D floating requirement badge above door when locked
+	_status_badge = Label3D.new()
+	_status_badge.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_status_badge.font_size = 44
+	_status_badge.outline_size = 8
+	_status_badge.outline_modulate = Color(0.05, 0.05, 0.14)
+	_status_badge.modulate = Color(1.0, 0.88, 0.45)
+	_status_badge.position = Vector3(0.0, 3.15, 0.0)
+	add_child(_status_badge)
+	_refresh_badge()
+
 
 func update_conditions(keys_held: int, switches_active: int) -> void:
 	_collected_keys = keys_held
 	_active_switches = switches_active
 	var satisfied := (_collected_keys >= required_keys and _active_switches >= required_switches)
 	set_unlocked(satisfied)
+	_refresh_badge()
 
 
 func get_prompt_key() -> String:
@@ -71,3 +84,18 @@ func _trigger_cinematic_exit(player: Node) -> void:
 	AudioManager.play_sfx("stage_complete")
 	door_activated.emit(self, player)
 	stage_exit_requested.emit(self)
+
+
+func _refresh_badge() -> void:
+	if _status_badge == null:
+		return
+	if is_unlocked:
+		_status_badge.visible = false
+		return
+	var parts: Array[String] = []
+	if required_keys > 0:
+		parts.append("★ %d/%d" % [_collected_keys, required_keys])
+	if required_switches > 0:
+		parts.append("◎ %d/%d" % [_active_switches, required_switches])
+	_status_badge.text = "  ".join(parts)
+	_status_badge.visible = not parts.is_empty()
