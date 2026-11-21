@@ -289,8 +289,8 @@ func _build_hud() -> void:
 	bottom_center.anchor_right = 0.5
 	bottom_center.anchor_top = 1.0
 	bottom_center.anchor_bottom = 1.0
-	bottom_center.offset_left = -240
-	bottom_center.offset_right = 240
+	bottom_center.offset_left = -165
+	bottom_center.offset_right = 165
 	bottom_center.offset_top = -175
 	bottom_center.offset_bottom = -34
 	bottom_center.alignment = BoxContainer.ALIGNMENT_END
@@ -301,7 +301,7 @@ func _build_hud() -> void:
 	_interact_btn = Button.new()
 	_interact_btn.visible = false
 	UIStyleHelper.style_button(_interact_btn, UIStyleHelper.ACCENT_GOLD, 22, 19)
-	_interact_btn.custom_minimum_size = Vector2(260, 56)
+	_interact_btn.custom_minimum_size = Vector2(200, 48)
 	_interact_btn.pressed.connect(func() -> void: GameState.emit_touch_interact())
 	bottom_center.add_child(_interact_btn)
 

@@ -76,7 +76,8 @@ func _setup_environment() -> void:
 	env.ambient_light_energy = 0.88
 	env.fog_enabled = true
 	env.fog_light_color = world_palette["fog"] as Color
-	env.fog_density = 0.004
+	env.fog_density = 0.003
+	env.fog_sky_affect = 0.0
 	env.glow_enabled = true
 	env.glow_intensity = 0.45
 	env.glow_bloom = 0.18
@@ -109,6 +110,7 @@ func _setup_environment() -> void:
 	blue_rim.rotation_degrees = Vector3(-30.0, 125.0, 0.0)
 	blue_rim.shadow_enabled = false
 	add_child(blue_rim)
+	_spawn_3d_starfield(110)
 
 
 func _build_stage_geometry() -> void:
@@ -510,10 +512,53 @@ func _on_interaction_target_changed(target: Node) -> void:
 		_hud.set_interaction_prompt("")
 
 
-func _on_stage_completed(_door: GoldenDoor) -> void:
+func _on_stage_completed(door: GoldenDoor) -> void:
 	SaveManager.mark_stage_completed(stage_id)
-	if stage_id < 30:
-		_hud.show_stage_complete(stage_id)
+	if _player != null:
+		_player.movement_locked = true
+		var walk_tw := create_tween()
+		walk_tw.tween_property(_player, "global_position", door.global_position, 0.95).set_trans(Tween.TRANS_SINE)
+	if _camera_rig != null:
+		_camera_rig.play_door_zoom_in(door.global_position, 1.15)
+	# Smooth golden-light cinematic fade into the next stage automatically (zero popup button!)
+	var fade_layer := CanvasLayer.new()
+	fade_layer.layer = 50
+	add_child(fade_layer)
+	var flash := ColorRect.new()
+	flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	flash.color = Color(1.0, 0.92, 0.72, 0.0)
+	fade_layer.add_child(flash)
+	var tw := create_tween()
+	tw.tween_interval(0.55)
+	tw.tween_property(flash, "color:a", 1.0, 0.65).set_trans(Tween.TRANS_CUBIC)
+	tw.tween_callback(func() -> void:
+		if stage_id < 30:
+			GameState.start_stage(stage_id + 1)
+	)
+
+
+func _spawn_3d_starfield(count: int) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = stage_id * 73 + 19
+	var star_mat := StandardMaterial3D.new()
+	star_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	star_mat.albedo_color = Color(0.92, 0.96, 1.0)
+	var sph := SphereMesh.new()
+	sph.radius = 0.16
+	sph.height = 0.32
+	sph.radial_segments = 5
+	sph.rings = 3
+	for i in range(count):
+		var m := MeshInstance3D.new()
+		m.mesh = sph
+		m.material_override = star_mat
+		var dist := rng.randf_range(30.0, 62.0)
+		var theta := rng.randf_range(0.0, TAU)
+		var phi := rng.randf_range(-0.20, 0.92)
+		m.position = Vector3(cos(theta) * cos(phi) * dist, sin(phi) * dist + 2.0, sin(theta) * cos(phi) * dist)
+		var sc := rng.randf_range(0.5, 1.45)
+		m.scale = Vector3(sc, sc, sc)
+		_world_root.add_child(m)
 
 
 static func _to_vec3(v: Variant) -> Vector3:
