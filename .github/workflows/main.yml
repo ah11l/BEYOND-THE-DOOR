@@ -93,7 +93,9 @@ jobs:
             mkdir -p android/build
             unzip -q /root/.local/share/godot/export_templates/4.5.2.stable/android_source.zip -d android/build
             chmod +x android/build/gradlew || true
+            touch android/build/.gdignore
           fi
+          printf '4.5.2.stable\n' > android/.build_version
 
           if [ -f android/build/AndroidManifest.xml ] && ! grep -q "com.google.android.gms.ads.APPLICATION_ID" android/build/AndroidManifest.xml; then
             awk '{
