@@ -17,14 +17,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check Godot and project files
+      - name: Configure Godot Android templates and Java SDK
         shell: bash
         run: |
           set -euo pipefail
-          godot --version
-          test -f project.godot
-          test -f export_presets.cfg
-          mkdir -p builds
+          mkdir -p /root/.config/godot builds
+          JAVA_DIR="${JAVA_HOME:-$(dirname $(dirname $(readlink -f $(which java))))}"
+          ANDROID_DIR="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/lib/android-sdk}}"
+          if [ ! -f /root/debug.keystore ]; then
+            keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore /root/debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
+          fi
+          cat > /root/.config/godot/editor_settings-4.5.tres <<EOF
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/java_sdk_path = "${JAVA_DIR}"
+          export/android/android_sdk_path = "${ANDROID_DIR}"
+          export/android/debug_keystore = "/root/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          EOF
 
       - name: Fetch Poing Studios AdMob v5.1.0 GDScript addon
         shell: bash
@@ -43,10 +55,14 @@ jobs:
 
       - name: Import project resources
         shell: bash
+        env:
+          HOME: /root
         run: godot --headless --path . --import || godot --headless --editor --path . --quit || true
 
       - name: Export debug APK
         shell: bash
+        env:
+          HOME: /root
         run: |
           set -euo pipefail
           godot --headless --path . --export-debug "Android Debug APK" builds/beyond_the_door_debug.apk
