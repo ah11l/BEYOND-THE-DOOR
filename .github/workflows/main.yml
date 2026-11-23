@@ -73,15 +73,13 @@ jobs:
             fi
           fi
 
-      - name: Import project resources (with transparent status logging)
+      - name: Import project resources
         shell: bash
         env:
           HOME: /root
         run: |
-          set +e
+          set -euo pipefail
           godot --headless --path . --import
-          IMPORT_RC=$?
-          echo "Godot headless --import exited with code: ${IMPORT_RC}"
           test -d .godot/imported
 
       - name: Export debug APK
