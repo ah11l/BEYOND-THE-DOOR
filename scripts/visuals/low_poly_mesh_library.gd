@@ -83,6 +83,36 @@ const WORLD_PALETTES := {
 }
 
 
+
+const TEX_ISLAND_TOP := "res://assets/textures/island_top.png"
+const TEX_CLIFF_ROCK := "res://assets/textures/cliff_rock.png"
+const TEX_WOOD_PLANKS := "res://assets/textures/wood_planks.png"
+const TEX_COSMIC_SKY := "res://assets/textures/cosmic_sky.png"
+
+
+static func make_textured_material(tex_path: String, tint: Color = Color.WHITE, roughness: float = 0.84, uv_scale: Vector3 = Vector3(1.0, 1.0, 1.0), triplanar: bool = true) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = tint
+	mat.roughness = roughness
+	mat.metallic = 0.04
+	var tex := load(tex_path) as Texture2D
+	if tex != null:
+		mat.albedo_texture = tex
+		mat.uv1_triplanar = triplanar
+		mat.uv1_scale = uv_scale
+	return mat
+
+
+static func build_cosmic_sky() -> Sky:
+	var sky := Sky.new()
+	var pmat := PanoramaSkyMaterial.new()
+	var tex := load(TEX_COSMIC_SKY) as Texture2D
+	if tex != null:
+		pmat.panorama = tex
+	sky.sky_material = pmat
+	return sky
+
+
 static func get_world_palette(world_index: int) -> Dictionary:
 	return WORLD_PALETTES.get(clampi(world_index, 1, 6), WORLD_PALETTES[1])
 
@@ -101,11 +131,9 @@ static func make_flat_material(color: Color, roughness: float = 0.82, emission: 
 
 
 static func create_floating_island_mesh(size: Vector3, top_color: Color, side_color: Color, seed_val: int = 1, grass_color: Color = Color(0.20, 0.38, 0.34)) -> ArrayMesh:
-	## Faceted floating island with mossy grass perimeter rim, stone interior plateau,
-	## and multi-faceted tapered rock cliff underside (playable top sits cleanly at y = 0).
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-
+	## 2-Surface Painted Floating Island:
+	## Surface 0: Hand-painted mossy grass & stone flagstones (island_top.png) with planar UVs
+	## Surface 1: Hand-painted faceted purple-slate cliff rock (cliff_rock.png) with triplanar mapping
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_val
 
@@ -114,6 +142,9 @@ static func create_floating_island_mesh(size: Vector3, top_color: Color, side_co
 	var thickness := maxf(size.y, 1.8)
 	var sub_x := clampi(int(round(size.x / 1.45)), 3, 8)
 	var sub_z := clampi(int(round(size.z / 1.45)), 3, 8)
+
+	var st_top := SurfaceTool.new()
+	st_top.begin(Mesh.PRIMITIVE_TRIANGLES)
 
 	var grid: Array = []
 	for ix in range(sub_x + 1):
@@ -134,14 +165,16 @@ static func create_floating_island_mesh(size: Vector3, top_color: Color, side_co
 			var p10: Vector3 = grid[ix + 1][iz]
 			var p11: Vector3 = grid[ix + 1][iz + 1]
 			var p01: Vector3 = grid[ix][iz + 1]
-			var is_border := (ix == 0 or ix == sub_x - 1 or iz == 0 or iz == sub_z - 1)
-			var base_c := grass_color if is_border else top_color
-			var c1 := base_c.lightened(rng.randf_range(-0.05, 0.06))
-			var c2 := base_c.lightened(rng.randf_range(-0.05, 0.06))
-			_add_flat_tri(st, p00, p10, p11, c1)
-			_add_flat_tri(st, p00, p11, p01, c2)
+			_add_flat_tri(st_top, p00, p10, p11, Color.WHITE)
+			_add_flat_tri(st_top, p00, p11, p01, Color.WHITE)
 
-	# Stepped cliff lip + tapered craggy underside (3 vertical tiers for rich silhouette)
+	var mesh := st_top.commit()
+	var top_tint := Color.WHITE.lerp(top_color.lightened(0.28), 0.35)
+	mesh.surface_set_material(0, make_textured_material(TEX_ISLAND_TOP, top_tint, 0.86, Vector3(0.22, 0.22, 0.22), true))
+
+	# Surface 1: Faceted Cliff Rock Sides & Tapered Underside
+	var st_cliff := SurfaceTool.new()
+	st_cliff.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var lip_y := -0.26
 	var mid_y := -thickness * 0.58
 	var bottom_tip := Vector3(rng.randf_range(-hx * 0.18, hx * 0.18), -thickness * 1.62, rng.randf_range(-hz * 0.18, hz * 0.18))
@@ -163,17 +196,15 @@ static func create_floating_island_mesh(size: Vector3, top_color: Color, side_co
 	var n := top_ring.size()
 	for i in range(n):
 		var ni := (i + 1) % n
-		var lip_c := grass_color.darkened(rng.randf_range(0.18, 0.28))
-		var cliff_c := side_color.lightened(rng.randf_range(-0.05, 0.07))
-		var deep_c := side_color.darkened(rng.randf_range(0.16, 0.30))
-		_add_flat_tri(st, top_ring[i], lip_ring[i], lip_ring[ni], lip_c)
-		_add_flat_tri(st, top_ring[i], lip_ring[ni], top_ring[ni], lip_c.lightened(0.04))
-		_add_flat_tri(st, lip_ring[i], mid_ring[i], mid_ring[ni], cliff_c)
-		_add_flat_tri(st, lip_ring[i], mid_ring[ni], lip_ring[ni], cliff_c.lightened(0.05))
-		_add_flat_tri(st, mid_ring[i], bottom_tip, mid_ring[ni], deep_c)
+		_add_flat_tri(st_cliff, top_ring[i], lip_ring[i], lip_ring[ni], Color.WHITE)
+		_add_flat_tri(st_cliff, top_ring[i], lip_ring[ni], top_ring[ni], Color.WHITE)
+		_add_flat_tri(st_cliff, lip_ring[i], mid_ring[i], mid_ring[ni], Color.WHITE)
+		_add_flat_tri(st_cliff, lip_ring[i], mid_ring[ni], lip_ring[ni], Color.WHITE)
+		_add_flat_tri(st_cliff, mid_ring[i], bottom_tip, mid_ring[ni], Color.WHITE)
 
-	var mesh := st.commit()
-	mesh.surface_set_material(0, make_flat_material(Color.WHITE, 0.88, Color.BLACK, 0.0, true))
+	st_cliff.commit(mesh)
+	var cliff_tint := Color.WHITE.lerp(side_color.lightened(0.35), 0.35)
+	mesh.surface_set_material(1, make_textured_material(TEX_CLIFF_ROCK, cliff_tint, 0.90, Vector3(0.28, 0.28, 0.28), true))
 	return mesh
 
 
@@ -265,7 +296,7 @@ static func create_wooden_cabin(scale_factor: float = 1.0) -> Node3D:
 	## Dark-timber atmospheric cabin matching 254211.png landmarks.
 	var root := Node3D.new()
 	root.name = "WoodenCabin"
-	var wall_mat := make_flat_material(Color(0.24, 0.19, 0.26), 0.90)
+	var wall_mat := make_textured_material(TEX_WOOD_PLANKS, Color(0.88, 0.85, 0.92), 0.88, Vector3(0.65, 0.65, 0.65), true)
 	var roof_mat := make_flat_material(Color(0.16, 0.14, 0.22), 0.86)
 	var win_mat := make_flat_material(Color(0.96, 0.78, 0.42), 0.2, Color(0.95, 0.72, 0.30), 1.3)
 
@@ -320,7 +351,7 @@ static func create_luminous_waterfall(height: float = 3.8, width: float = 0.85) 
 static func create_bench() -> Node3D:
 	var root := Node3D.new()
 	root.name = "Bench"
-	var wood_mat := make_flat_material(Color(0.30, 0.20, 0.20), 0.88)
+	var wood_mat := make_textured_material(TEX_WOOD_PLANKS, Color(0.95, 0.90, 0.88), 0.86, Vector3(0.8, 0.8, 0.8), true)
 
 	var seat := MeshInstance3D.new()
 	var seat_box := BoxMesh.new()
@@ -416,7 +447,7 @@ static func create_rock(color: Color, scale_factor: float = 1.0) -> MeshInstance
 	sphere.rings = 2
 	rock.mesh = sphere
 	rock.position = Vector3(0.0, 0.18 * scale_factor, 0.0)
-	rock.material_override = make_flat_material(color, 0.92)
+	rock.material_override = make_textured_material(TEX_CLIFF_ROCK, Color.WHITE.lerp(color, 0.35), 0.90, Vector3(0.6, 0.6, 0.6), true)
 	return rock
 
 
@@ -440,7 +471,14 @@ static func build_hooded_character(is_ghost: bool = false, skin_id: String = "wa
 		eye_mat = make_flat_material(Color(0.75, 0.98, 1.0), 0.1, Color(0.55, 0.96, 1.0), 2.4)
 		lantern_mat = make_flat_material(Color(0.55, 0.96, 1.0), 0.1, Color(0.45, 0.95, 1.0), 2.8)
 	else:
-		var cfg := GameState.get_skin_config(skin_id)
+		var skin_map := {
+			"wanderer": {"cloak": Color(0.11, 0.12, 0.20), "eye": Color(1.0, 0.84, 0.45), "lantern": Color(0.24, 0.88, 1.0)},
+			"dawn_cloak": {"cloak": Color(0.16, 0.18, 0.34), "eye": Color(1.0, 0.90, 0.55), "lantern": Color(1.0, 0.78, 0.32)},
+			"clockwork_keeper": {"cloak": Color(0.22, 0.13, 0.32), "eye": Color(0.84, 0.68, 1.0), "lantern": Color(0.76, 0.45, 0.98)},
+			"abyss_walker": {"cloak": Color(0.18, 0.08, 0.14), "eye": Color(1.0, 0.56, 0.62), "lantern": Color(0.95, 0.42, 0.58)},
+			"starlight_architect": {"cloak": Color(0.14, 0.22, 0.32), "eye": Color(0.78, 0.98, 1.0), "lantern": Color(0.32, 0.96, 0.88)},
+		}
+		var cfg: Dictionary = skin_map.get(skin_id, skin_map["wanderer"])
 		var c_col: Color = cfg.get("cloak", Color(0.11, 0.12, 0.20))
 		var e_col: Color = cfg.get("eye", Color(1.0, 0.84, 0.45))
 		lantern_col = cfg.get("lantern", Color(0.24, 0.88, 1.0))
@@ -538,7 +576,7 @@ static func create_grass_tuft(color: Color = Color(0.20, 0.42, 0.34)) -> Node3D:
 
 static func create_scenic_arch(stone_color: Color, glow_color: Color) -> Node3D:
 	var root := Node3D.new()
-	var s_mat := make_flat_material(stone_color, 0.84)
+	var s_mat := make_textured_material(TEX_CLIFF_ROCK, Color.WHITE.lerp(stone_color, 0.35), 0.86, Vector3(0.45, 0.45, 0.45), true)
 	var g_mat := make_flat_material(glow_color, 0.2, glow_color, 1.35)
 	for sx in [-1.05, 1.05]:
 		var col := MeshInstance3D.new()

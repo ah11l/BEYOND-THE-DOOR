@@ -117,8 +117,9 @@ func _build_live_3d_backdrop() -> void:
 	svc.add_child(vp)
 
 	var env := Environment.new()
-	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color(0.032, 0.044, 0.115)
+	env.background_mode = Environment.BG_SKY
+	env.sky = LowPolyMeshLibrary.build_cosmic_sky()
+	env.background_energy_multiplier = 1.05
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color(0.46, 0.44, 0.68)
 	env.ambient_light_energy = 0.82

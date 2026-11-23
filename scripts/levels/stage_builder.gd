@@ -85,8 +85,9 @@ func _on_settings_changed() -> void:
 
 func _setup_environment() -> void:
 	var env := Environment.new()
-	env.background_mode = Environment.BG_COLOR
-	env.background_color = (world_palette["sky_top"] as Color).lerp(Color(0.025, 0.035, 0.095), 0.45)
+	env.background_mode = Environment.BG_SKY
+	env.sky = LowPolyMeshLibrary.build_cosmic_sky()
+	env.background_energy_multiplier = 1.05
 
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = (world_palette["light"] as Color).darkened(0.50)
@@ -135,8 +136,8 @@ func _build_stage_geometry() -> void:
 	var accent_col: Color = world_palette["accent"]
 	var accent_alt: Color = world_palette.get("accent_alt", accent_col.darkened(0.2))
 
-	var min_pt := Vector3(INF, INF, INF)
-	var max_pt := Vector3(-INF, -INF, -INF)
+	var min_pt := Vector3(9999.0, 9999.0, 9999.0)
+	var max_pt := Vector3(-9999.0, -9999.0, -9999.0)
 
 	# 1. Floating Islands (with tight collision matching playable top surface & rich decorative rims)
 	var islands: Array = stage_def.get("islands", [])
@@ -152,8 +153,10 @@ func _build_stage_geometry() -> void:
 			t_col = top_col.lerp(Color(0.58, 0.34, 0.72), 0.38)
 			g_col = grass_col.lerp(Color(0.46, 0.28, 0.64), 0.40)
 
-		min_pt = min_pt.min(pos - sz * 0.5)
-		max_pt = max_pt.max(pos + sz * 0.5)
+		var lo := pos - sz * 0.5
+		var hi := pos + sz * 0.5
+		min_pt = Vector3(minf(min_pt.x, lo.x), minf(min_pt.y, lo.y), minf(min_pt.z, lo.z))
+		max_pt = Vector3(maxf(max_pt.x, hi.x), maxf(max_pt.y, hi.y), maxf(max_pt.z, hi.z))
 
 		var body := StaticBody3D.new()
 		body.name = "Island_%d" % idx
@@ -412,12 +415,11 @@ func _create_bridge_body(p_a: Vector3, p_b: Vector3, width: float, is_magic: boo
 	body.position = mid + Vector3(0.0, 0.035, 0.0)
 	body.rotation.y = atan2(diff.x, diff.z)
 
-	var mat := LowPolyMeshLibrary.make_flat_material(
-		Color(0.24, 0.58, 0.78) if is_magic else Color(0.36, 0.22, 0.18),
-		0.72,
-		Color(0.22, 0.68, 0.88) if is_magic else Color.BLACK,
-		0.48 if is_magic else 0.0
-	)
+	var mat: StandardMaterial3D
+	if is_magic:
+		mat = LowPolyMeshLibrary.make_flat_material(Color(0.24, 0.58, 0.78), 0.72, Color(0.22, 0.68, 0.88), 0.50)
+	else:
+		mat = LowPolyMeshLibrary.make_textured_material(LowPolyMeshLibrary.TEX_WOOD_PLANKS, Color(0.95, 0.92, 0.90), 0.84, Vector3(0.55, 0.55, 0.55), true)
 	var rail_mat := LowPolyMeshLibrary.make_flat_material(
 		Color(0.36, 0.72, 0.88) if is_magic else Color(0.24, 0.14, 0.14), 0.78
 	)

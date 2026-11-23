@@ -1,4 +1,4 @@
-# BEYOND THE DOOR (ما وراء الباب) — Build & Test Report (V19)
+# BEYOND THE DOOR (ما وراء الباب) — Build & Test Report (V21)
 
 **Engine:** Godot 4.5.2 (`GL Compatibility`)  
 **Workflow:** `.github/workflows/main.yml` (`barichello/godot-ci:4.5.2`) — Verified Green for Debug APK & Signed Google Play AAB  
@@ -11,7 +11,7 @@
 - **Unreachable Golden Exit Doors (BFS physics/bridge/gravity/portal graph):** 0
 - **Asset Header Integrity (PNG / TTF / WAV):** 0 mismatches (`majnon_studio_logo.png` verified genuine PNG + 5 new contextual SVG icons).
 
-## 2. V19 Major Overhaul Summary (Cumulative with V9 & V10)
+## 2. V21 Major Overhaul Summary (Cumulative with V9 & V10)
 1. **Visual Redesign:** Restrained cosmic palettes, mossy-rimmed faceted floating islands, layered/pine trees with camera occlusion fade, wooden cabins, luminous waterfalls, and reduced bloom.
 2. **Dynamic Camera (`iso_camera.gd`):** Stage overview glide, velocity lookahead, elevation zoom, and layer-32 prop occlusion fade while preserving consistent joystick controls.
 3. **Contextual Circular UI & Parchment Notes (`game_hud.gd`):** Floating circular icon button (Hand / Book / Door / Search) + aged Parchment Scroll panel for Clue Stones.
@@ -21,10 +21,14 @@
 
 ## 3. Honest Verification Separation
 - **Passed (Static Environment):** `tools/qa_stage_audit.py` (120/120 stages, 0 broken refs, 0 asset header errors), GDScript class/signal wiring audit, and 812-key AR/EN parity check.
-- **Requires Live Android Device Testing (after GitHub Actions builds V19 APK):** Dynamic camera framing on corners/elevations, circular interact button positioning on phone screens, 3D opening cinematic pacing, boss encounters on Stage 20+, and live AdMob ads via Google Play Internal Testing AAB.
+- **Requires Live Android Device Testing (after GitHub Actions builds V21 APK):** Dynamic camera framing on corners/elevations, circular interact button positioning on phone screens, 3D opening cinematic pacing, boss encounters on Stage 20+, and live AdMob ads via Google Play Internal Testing AAB.
 
-- **V19 Upgrades:** Responsive anchor-based parchment/story/ending panels (zero fixed-width overflow), interactive `GuardianBoss` jumpable 3D shockwave rings + Boss Seal Bar, and dedicated `qa-audit` GitHub Actions job running `tools/qa_stage_audit.py` on every push.
+- **V21 Upgrades:** Responsive anchor-based parchment/story/ending panels (zero fixed-width overflow), interactive `GuardianBoss` jumpable 3D shockwave rings + Boss Seal Bar, and dedicated `qa-audit` GitHub Actions job running `tools/qa_stage_audit.py` on every push.
 
-- **V19 Visual & Gameplay Overhaul:** Auto-lush island decorator across all 120 stages (wooden cabins, hanging cliff vines, dense perimeter grass, varied plum/indigo/pine trees, cyan crystal clusters with strict >=1.65m gameplay clearance), closer dynamic camera (`8.6, 7.6, 8.6`, FOV 38, lookahead + corner yaw), luminous pedestals & 2.1m circular Hand/Search contextual zones on Keys & Crystals, early Guardian Watchers on Stages 5 & 10, and first-launch 3D Opening Cinematic regardless of Continue/Stage.
+- **V21 Visual & Gameplay Overhaul:** Auto-lush island decorator across all 120 stages (wooden cabins, hanging cliff vines, dense perimeter grass, varied plum/indigo/pine trees, cyan crystal clusters with strict >=1.65m gameplay clearance), closer dynamic camera (`8.6, 7.6, 8.6`, FOV 38, lookahead + corner yaw), luminous pedestals & 2.1m circular Hand/Search contextual zones on Keys & Crystals, early Guardian Watchers on Stages 5 & 10, and first-launch 3D Opening Cinematic regardless of Continue/Stage.
 
-- **V19 Hotfix:** Fixed swapped `overlay.add_child(panel)` / `center.add_child(panel)` scope bug in `scripts/ui/game_hud.gd` (`_build_pause_overlay` and `show_story_chapter`).
+- **V21 Hotfix:** Fixed swapped `overlay.add_child(panel)` / `center.add_child(panel)` scope bug in `scripts/ui/game_hud.gd` (`_build_pause_overlay` and `show_story_chapter`).
+
+- **V21 Crash Fix (Blue Screen on Stage Load):** Replaced `Vector3.min()`/`.max()` in `stage_builder.gd` with explicit `minf`/`maxf` bounds, removed `GameState` autoload access from `static func LowPolyMeshLibrary.build_hooded_character()`, and bundled fixed `game_hud.gd`.
+
+- **V21 Painted 3D Textures & Cosmic Skybox:** Added 4 real hand-painted seamless PNG textures (`assets/textures/cosmic_sky.png`, `island_top.png`, `cliff_rock.png`, `wood_planks.png`) mapped via triplanar 2-surface floating islands, textured wooden bridges/cabins/benches/arches/rocks, and 360° `PanoramaSkyMaterial` cosmic nebula skybox in both Gameplay and Main Menu.
