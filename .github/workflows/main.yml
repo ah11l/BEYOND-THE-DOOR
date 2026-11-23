@@ -73,14 +73,18 @@ jobs:
             fi
           fi
 
-      - name: Import project resources
+      - name: Import project resources & verify zero GDScript parse errors
         shell: bash
         env:
           HOME: /root
         run: |
           set -euo pipefail
-          godot --headless --path . --import
+          godot --headless --path . --import 2>&1 | tee /tmp/godot_import.log
           test -d .godot/imported
+          if grep -E "SCRIPT ERROR:|Parse Error:" /tmp/godot_import.log; then
+            echo "FAIL: GDScript parse/script errors detected during Godot import!"
+            exit 1
+          fi
 
       - name: Export debug APK
         shell: bash
@@ -154,4 +158,3 @@ jobs:
           path: builds/beyond_the_door_release.aab
           if-no-files-found: error
           retention-days: 14
-          
