@@ -1,10 +1,10 @@
-# BEYOND THE DOOR (ما وراء الباب) — Project Status (V18 Complete Overhaul)
+# BEYOND THE DOOR (ما وراء الباب) — Project Status (V19 Complete Overhaul)
 
 **Studio:** majnon.studio (مجنون استديو)  
 **Engine:** Godot 4.5.2 (`GL Compatibility` / GDScript)  
 **Repository:** `ah11l/BEYOND-THE-DOOR`
 
-## Implemented & Statically Verified in Source (V18)
+## Implemented & Statically Verified in Source (V19)
 - **Visual Redesign (Reference-Aligned, Restrained Cosmic Style):**
   - `low_poly_mesh_library.gd` & `stage_builder.gd`: Restrained deep-navy, muted indigo, dark sage-moss grass rims, subdued turquoise crystals, layered canopy & pine trees (with layer-32 camera occlusion fade), dark-timber cabins, and luminous waterfalls across all 6 worlds while preserving the approved hooded protagonist silhouette.
 - **Intelligent Dynamic Camera (`iso_camera.gd`):**
@@ -19,9 +19,11 @@
   - Hidden room-state pickups disable `Area3D` monitoring/collision; Echo Ghost syncs `world_side` & `room_state` with luminous path trail; overlapping `GravityZone`s tracked by `zone_id`; `skip_stage` works up to Stage 120; `majnon_studio_logo.png` converted to genuine PNG; CI `.github/workflows/main.yml` builds Debug APK & Signed Google Play AAB.
 
 ## Pending Live Device Verification
-- Real Android device testing of the compiled V18 Debug APK (dynamic camera feel, contextual circular button placement across aspect ratios, 3D opening cinematic, boss encounters, and wardrobe switching).
+- Real Android device testing of the compiled V19 Debug APK (dynamic camera feel, contextual circular button placement across aspect ratios, 3D opening cinematic, boss encounters, and wardrobe switching).
 - Live AdMob ad testing via Google Play Console Internal Testing using the signed AAB.
 
-- **V18 Upgrades:** Responsive anchor-based parchment/story/ending panels (zero fixed-width overflow), interactive `GuardianBoss` jumpable 3D shockwave rings + Boss Seal Bar, and dedicated `qa-audit` GitHub Actions job running `tools/qa_stage_audit.py` on every push.
+- **V19 Upgrades:** Responsive anchor-based parchment/story/ending panels (zero fixed-width overflow), interactive `GuardianBoss` jumpable 3D shockwave rings + Boss Seal Bar, and dedicated `qa-audit` GitHub Actions job running `tools/qa_stage_audit.py` on every push.
 
-- **V18 Visual & Gameplay Overhaul:** Auto-lush island decorator across all 120 stages (wooden cabins, hanging cliff vines, dense perimeter grass, varied plum/indigo/pine trees, cyan crystal clusters with strict >=1.65m gameplay clearance), closer dynamic camera (`8.6, 7.6, 8.6`, FOV 38, lookahead + corner yaw), luminous pedestals & 2.1m circular Hand/Search contextual zones on Keys & Crystals, early Guardian Watchers on Stages 5 & 10, and first-launch 3D Opening Cinematic regardless of Continue/Stage.
+- **V19 Visual & Gameplay Overhaul:** Auto-lush island decorator across all 120 stages (wooden cabins, hanging cliff vines, dense perimeter grass, varied plum/indigo/pine trees, cyan crystal clusters with strict >=1.65m gameplay clearance), closer dynamic camera (`8.6, 7.6, 8.6`, FOV 38, lookahead + corner yaw), luminous pedestals & 2.1m circular Hand/Search contextual zones on Keys & Crystals, early Guardian Watchers on Stages 5 & 10, and first-launch 3D Opening Cinematic regardless of Continue/Stage.
+
+- **V19 Hotfix:** Fixed swapped `overlay.add_child(panel)` / `center.add_child(panel)` scope bug in `scripts/ui/game_hud.gd` (`_build_pause_overlay` and `show_story_chapter`).

@@ -567,7 +567,7 @@ func _build_pause_overlay() -> void:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(400, 0)
 	panel.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style())
-	overlay.add_child(panel)
+	center.add_child(panel)
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 10)
@@ -934,7 +934,7 @@ func show_story_chapter(world_idx: int, story_key: String) -> void:
 	panel.anchor_top = 0.16
 	panel.anchor_bottom = 0.84
 	panel.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style(Color(0.08, 0.09, 0.22, 0.96), UIStyleHelper.ACCENT_GOLD, 22, 2))
-	center.add_child(panel)
+	overlay.add_child(panel)
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 18)
