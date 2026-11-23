@@ -43,6 +43,8 @@ def island_xz_gap(a: dict, b: dict) -> float:
 
 def check_assets() -> list:
     errors = []
+    for stray in sorted(ROOT.glob("*.gd")):
+        errors.append(f"Duplicate root .gd file (delete from repo root): {stray.name}")
     for p in sorted(ROOT.rglob("*.png")):
         if p.read_bytes()[:8] != b"\x89PNG\r\n\x1a\n":
             errors.append(f"Invalid PNG header: {p.relative_to(ROOT)}")

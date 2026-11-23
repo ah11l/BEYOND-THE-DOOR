@@ -843,7 +843,7 @@ func _auto_dress_lush_islands() -> void:
 			_world_root.add_child(v)
 
 		# 2. Dense perimeter grass tufts along outer rim
-		var corners := [
+		var corners: Array[Vector3] = [
 			Vector3(-hx * 0.80, 0.0, -hz * 0.80),
 			Vector3(hx * 0.80, 0.0, -hz * 0.80),
 			Vector3(-hx * 0.80, 0.0, hz * 0.80),
@@ -851,8 +851,8 @@ func _auto_dress_lush_islands() -> void:
 			Vector3(0.0, 0.0, -hz * 0.84),
 			Vector3(-hx * 0.84, 0.0, 0.0),
 		]
-		for off in corners:
-			var wp := pos + off
+		for off: Vector3 in corners:
+			var wp: Vector3 = pos + off
 			if is_clear.call(wp, 1.35):
 				var gt := LowPolyMeshLibrary.create_grass_tuft(grass_col.lightened(rng.randf_range(0.05, 0.22)))
 				gt.position = wp
