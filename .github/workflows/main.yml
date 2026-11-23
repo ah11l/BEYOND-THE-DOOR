@@ -1,4 +1,4 @@
-name: Build BEYOND THE DOOR (APK + Google Play AAB)
+name: Build BEYOND THE DOOR (QA + APK + Google Play AAB)
 
 on:
   push:
@@ -9,7 +9,19 @@ permissions:
   contents: read
 
 jobs:
+  qa-audit:
+    name: Static QA Audit (120 Stages & Assets)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run 120-Stage & Asset Integrity Audit
+        run: python3 tools/qa_stage_audit.py
+
   export-android:
+    name: Export Android Debug APK & Signed Google Play AAB
+    needs: qa-audit
     runs-on: ubuntu-latest
     container:
       image: barichello/godot-ci:4.5.2
@@ -47,21 +59,24 @@ jobs:
         run: |
           set -euo pipefail
           if [ ! -f addons/admob/plugin.cfg ]; then
-            curl -fsSL https://github.com/poingstudios/godot-admob-plugin/archive/refs/tags/v5.1.0.zip -o /tmp/admob_v510.zip || true
-            if [ -s /tmp/admob_v510.zip ]; then
-              unzip -q /tmp/admob_v510.zip -d /tmp/admob_extract
-              SRC_ADDON=$(find /tmp/admob_extract -type d -path "*/addons/admob" | head -n 1)
-              if [ -n "$SRC_ADDON" ]; then
-                cp -rn "$SRC_ADDON/." addons/admob/ || true
-              fi
+            curl -fsSL https://github.com/poingstudios/godot-admob-plugin/archive/refs/tags/v5.1.0.zip -o /tmp/admob_v510.zip
+            unzip -q /tmp/admob_v510.zip -d /tmp/admob_extract
+            SRC_ADDON=$(find /tmp/admob_extract -type d -path "*/addons/admob" | head -n 1)
+            if [ -n "$SRC_ADDON" ]; then
+              cp -rn "$SRC_ADDON/." addons/admob/ || true
             fi
           fi
 
-      - name: Import project resources
+      - name: Import project resources (with transparent status logging)
         shell: bash
         env:
           HOME: /root
-        run: godot --headless --path . --import || godot --headless --editor --path . --quit || true
+        run: |
+          set +e
+          godot --headless --path . --import
+          IMPORT_RC=$?
+          echo "Godot headless --import exited with code: ${IMPORT_RC}"
+          test -d .godot/imported
 
       - name: Export debug APK
         shell: bash
