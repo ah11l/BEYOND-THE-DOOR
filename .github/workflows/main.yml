@@ -38,7 +38,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p /root/.config/godot builds
-          JAVA_DIR="${JAVA_HOME:-$(dirname$(dirname $(readlink -f$(which java))))}"
+          JAVA_DIR="${JAVA_HOME:-$(dirname $(dirname $(readlink -f $(which java))))}"
           ANDROID_DIR="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/lib/android-sdk}}"
           if [ ! -f /root/debug.keystore ]; then
             keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore /root/debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
@@ -62,5 +62,98 @@ jobs:
             if command -v wget >/dev/null 2>&1; then
               wget -q https://github.com/poingstudios/godot-admob-plugin/archive/refs/tags/v5.1.0.zip -O /tmp/admob_v510.zip || true
             elif command -v curl >/dev/null 2>&1; then
-              curl -fsSL 
-              
+              curl -fsSL https://github.com/poingstudios/godot-admob-plugin/archive/refs/tags/v5.1.0.zip -o /tmp/admob_v510.zip || true
+            fi
+            if [ -s /tmp/admob_v510.zip ]; then
+              unzip -q /tmp/admob_v510.zip -d /tmp/admob_extract
+              SRC_ADDON=$(find /tmp/admob_extract -type d -path "*/addons/admob" | head -n 1)
+              if [ -n "$SRC_ADDON" ]; then
+                cp -rn "$SRC_ADDON/." addons/admob/ || true
+              fi
+            fi
+          fi
+
+      - name: Import project resources (with transparent status logging)
+        shell: bash
+        env:
+          HOME: /root
+        run: |
+          set +e
+          godot --headless --path . --import
+          IMPORT_RC=$?
+          echo "Godot headless --import exited with code: ${IMPORT_RC}"
+          test -d .godot/imported
+
+      - name: Export debug APK
+        shell: bash
+        env:
+          HOME: /root
+        run: |
+          set -euo pipefail
+          godot --headless --path . --export-debug "Android Debug APK" builds/beyond_the_door_debug.apk
+          test -s builds/beyond_the_door_debug.apk
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: beyond-the-door-debug-apk
+          path: builds/beyond_the_door_debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Prepare Gradle template, AdMob Manifest & Release Keystore (for Google Play AAB)
+        if: ${{ env.BTD_RELEASE_KEYSTORE_BASE64 != '' && env.BTD_RELEASE_KEYSTORE_PASSWORD != '' && env.BTD_RELEASE_KEY_ALIAS != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEYSTORE_ABS="$(pwd)/builds/release.keystore"
+          printf '%s' "$BTD_RELEASE_KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > "$KEYSTORE_ABS"
+          test -s "$KEYSTORE_ABS"
+
+          if [ ! -d android/build ]; then
+            mkdir -p android/build
+            unzip -q /root/.local/share/godot/export_templates/4.5.2.stable/android_source.zip -d android/build
+            chmod +x android/build/gradlew || true
+            touch android/build/.gdignore
+          fi
+          printf '4.5.2.stable\n' > android/.build_version
+
+          if [ -f android/build/AndroidManifest.xml ] && ! grep -q "com.google.android.gms.ads.APPLICATION_ID" android/build/AndroidManifest.xml; then
+            awk '{
+              if ($0 ~ /<\/application>/) {
+                print "        <meta-data android:name=\"com.google.android.gms.ads.APPLICATION_ID\" android:value=\"ca-app-pub-2956752840406313~2454089044\" />"
+              }
+              print
+            }' android/build/AndroidManifest.xml > android/build/AndroidManifest.xml.tmp
+            mv android/build/AndroidManifest.xml.tmp android/build/AndroidManifest.xml
+          fi
+
+          KEYSTORE_ABS="$KEYSTORE_ABS" awk '
+            /^\[preset\.1\.options\]/ { in_p1=1 }
+            /^\[/ && !/^\[preset\.1\.options\]/ { in_p1=0 }
+            in_p1 && /^keystore\/release=/ { print "keystore/release=\"" ENVIRON["KEYSTORE_ABS"] "\""; next }
+            in_p1 && /^keystore\/release_user=/ { print "keystore/release_user=\"" ENVIRON["BTD_RELEASE_KEY_ALIAS"] "\""; next }
+            in_p1 && /^keystore\/release_password=/ { print "keystore/release_password=\"" ENVIRON["BTD_RELEASE_KEYSTORE_PASSWORD"] "\""; next }
+            { print }
+          ' export_presets.cfg > export_presets.cfg.tmp
+          mv export_presets.cfg.tmp export_presets.cfg
+
+      - name: Export signed Google Play AAB (with AdMob Gradle Build)
+        if: ${{ env.BTD_RELEASE_KEYSTORE_BASE64 != '' && env.BTD_RELEASE_KEYSTORE_PASSWORD != '' && env.BTD_RELEASE_KEY_ALIAS != '' }}
+        shell: bash
+        env:
+          HOME: /root
+        run: |
+          set -euo pipefail
+          godot --headless --path . --export-release "Android Google Play AAB" builds/beyond_the_door_release.aab
+          test -s builds/beyond_the_door_release.aab
+
+      - name: Upload signed Google Play AAB
+        if: ${{ env.BTD_RELEASE_KEYSTORE_BASE64 != '' && env.BTD_RELEASE_KEYSTORE_PASSWORD != '' && env.BTD_RELEASE_KEY_ALIAS != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: beyond-the-door-google-play-aab
+          path: builds/beyond_the_door_release.aab
+          if-no-files-found: error
+          retention-days: 14
+          
