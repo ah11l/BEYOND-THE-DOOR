@@ -174,12 +174,11 @@ func show_parchment_note(clue_key: String) -> void:
 	overlay.color = Color(0.02, 0.03, 0.08, 0.78)
 	_root.add_child(overlay)
 
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	overlay.add_child(center)
-
 	var scroll_card := PanelContainer.new()
-	scroll_card.custom_minimum_size = Vector2(540, 290)
+	scroll_card.anchor_left = 0.16
+	scroll_card.anchor_right = 0.84
+	scroll_card.anchor_top = 0.18
+	scroll_card.anchor_bottom = 0.82
 	var parch_style := StyleBoxFlat.new()
 	parch_style.bg_color = Color(0.84, 0.74, 0.58, 0.98)
 	parch_style.border_color = Color(0.45, 0.30, 0.16, 1.0)
@@ -190,7 +189,7 @@ func show_parchment_note(clue_key: String) -> void:
 	parch_style.content_margin_top = 24
 	parch_style.content_margin_bottom = 24
 	scroll_card.add_theme_stylebox_override("panel", parch_style)
-	center.add_child(scroll_card)
+	overlay.add_child(scroll_card)
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 16)
@@ -568,7 +567,7 @@ func _build_pause_overlay() -> void:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(400, 0)
 	panel.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style())
-	center.add_child(panel)
+	overlay.add_child(panel)
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 10)
@@ -929,12 +928,11 @@ func show_story_chapter(world_idx: int, story_key: String) -> void:
 	overlay.color = Color(0.03, 0.04, 0.11, 0.90)
 	_root.add_child(overlay)
 
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	overlay.add_child(center)
-
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(680, 0)
+	panel.anchor_left = 0.12
+	panel.anchor_right = 0.88
+	panel.anchor_top = 0.16
+	panel.anchor_bottom = 0.84
 	panel.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style(Color(0.08, 0.09, 0.22, 0.96), UIStyleHelper.ACCENT_GOLD, 22, 2))
 	center.add_child(panel)
 
@@ -969,3 +967,31 @@ func show_story_chapter(world_idx: int, story_key: String) -> void:
 	vbox.add_child(cont_btn)
 	LocalizationManager.apply_layout_direction(overlay)
 	get_tree().paused = true
+
+
+func update_boss_bar(world_idx: int, remaining_seals: int, total_seals: int) -> void:
+	var bar_panel := _root.find_child("BossSealBar", true, false) as PanelContainer
+	if remaining_seals <= 0 or total_seals <= 0:
+		if bar_panel != null:
+			bar_panel.visible = false
+		return
+	if bar_panel == null:
+		bar_panel = PanelContainer.new()
+		bar_panel.name = "BossSealBar"
+		bar_panel.anchor_left = 0.30
+		bar_panel.anchor_right = 0.70
+		bar_panel.anchor_top = 0.0
+		bar_panel.offset_top = 78
+		bar_panel.offset_bottom = 114
+		bar_panel.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style(Color(0.14, 0.06, 0.18, 0.88), Color(0.92, 0.45, 0.78), 16, 1))
+		_root.add_child(bar_panel)
+		var lbl := Label.new()
+		lbl.name = "BossSealLabel"
+		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lbl.add_theme_font_size_override("font_size", 15)
+		lbl.add_theme_color_override("font_color", Color(1.0, 0.88, 0.96))
+		bar_panel.add_child(lbl)
+	bar_panel.visible = true
+	var b_lbl := bar_panel.find_child("BossSealLabel", true, false) as Label
+	if b_lbl != null:
+		b_lbl.text = "%s — %s: %d / %d" % [LocalizationManager.t("boss_title_w%d" % clampi(world_idx, 1, 6)), LocalizationManager.t("boss_seals_label"), remaining_seals, total_seals]

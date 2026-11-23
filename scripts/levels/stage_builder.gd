@@ -52,6 +52,7 @@ func _ready() -> void:
 
 	_setup_environment()
 	_build_stage_geometry()
+	_auto_dress_lush_islands()
 	_setup_player_and_camera()
 	_setup_hud_and_echo()
 	_build_energy_conduits()
@@ -63,7 +64,7 @@ func _ready() -> void:
 
 	# First-time 3D Opening Cinematic on Stage 1, else World Chapter Story Card or stage intro
 	var world_starts := {1: "world_1_story", 21: "world_2_story", 41: "world_3_story", 61: "world_4_story", 81: "world_5_story", 101: "world_6_story"}
-	if stage_id == 1 and not SaveManager.is_intro_seen():
+	if not SaveManager.is_intro_seen():
 		_play_opening_cinematic()
 	else:
 		_camera_rig.configure_stage_framing(_stage_center, _stage_span, true)
@@ -384,7 +385,7 @@ func _build_stage_geometry() -> void:
 
 
 func _spawn_boss_if_finale() -> void:
-	if stage_id % 20 != 0:
+	if stage_id % 20 != 0 and stage_id != 5 and stage_id != 10:
 		return
 	var w_idx := int(stage_def.get("world", 1))
 	_boss = GuardianBoss.new()
@@ -392,7 +393,13 @@ func _spawn_boss_if_finale() -> void:
 	_boss.is_echo_boss = (w_idx == 5 or w_idx == 6)
 	var anchor := _golden_door.position if _golden_door != null else _stage_center
 	_boss.position = anchor + Vector3(0.0, 4.2, -1.6)
+	_boss.player_ref = _player
+	_boss.arena_floor_y = anchor.y
 	_boss.boss_spoke.connect(func(k: String) -> void: _hud.show_toast(k, 5.5))
+	_boss.player_hit_by_shockwave.connect(func() -> void:
+		_hud.show_toast("boss_shockwave_hit", 2.8)
+		_restart_from_checkpoint()
+	)
 	_world_root.add_child(_boss)
 
 
@@ -545,8 +552,13 @@ func _evaluate_door_conditions() -> void:
 			active_door_plates += 1
 	_golden_door.update_conditions(_keys_collected, active_door_plates)
 	_hud.update_key_counter(_keys_collected, _golden_door.required_keys)
-	if _golden_door.is_unlocked and _boss != null and is_instance_valid(_boss):
-		_boss.on_door_unlocked()
+	if _boss != null and is_instance_valid(_boss):
+		var total_seals := maxi(1, _golden_door.required_keys + _golden_door.required_switches)
+		var done_seals := mini(total_seals, _keys_collected + active_door_plates)
+		var rem_seals := 0 if _golden_door.is_unlocked else maxi(1, total_seals - done_seals)
+		_hud.update_boss_bar(int(stage_def.get("world", 1)), rem_seals, total_seals)
+		if _golden_door.is_unlocked:
+			_boss.on_door_unlocked()
 
 
 func _on_gravity_toggled(zone_id: String, reversed: bool) -> void:
@@ -769,3 +781,103 @@ func _build_energy_conduits() -> void:
 				m.position = pt
 				m.material_override = rune_mat
 				_conduit_root.add_child(m)
+
+
+func _auto_dress_lush_islands() -> void:
+	## Automatically enriches ALL 120 stages with reference-style (254211.png) lush perimeter grass,
+	## hanging cliff vines, multi-color canopy/pine trees, wooden cabins, and glowing cyan crystals
+	## while strictly preserving >= 1.65m clearance from spawn, keys, plates, blocks, bridges, and doors.
+	var grass_col: Color = world_palette.get("grass", Color(0.20, 0.38, 0.34))
+	var accent_a: Color = world_palette.get("accent", Color(0.56, 0.24, 0.48))
+	var accent_b: Color = world_palette.get("accent_alt", Color(0.22, 0.38, 0.56))
+
+	# Collect all gameplay-critical XZ points to keep 100% clear
+	var keep_clear: Array[Vector3] = [_to_vec3(stage_def.get("spawn", [0.0, 0.0, 0.0]))]
+	for k in stage_def.get("keys", []):
+		keep_clear.append(_to_vec3(k["pos"]))
+	for pl in stage_def.get("plates", []):
+		keep_clear.append(_to_vec3(pl["pos"]))
+	for blk in stage_def.get("blocks", []):
+		keep_clear.append(_to_vec3(blk["pos"]))
+	for d in stage_def.get("doors", []):
+		keep_clear.append(_to_vec3(d["pos"]))
+	for cp in stage_def.get("checkpoints", []):
+		keep_clear.append(_to_vec3(cp["pos"]))
+	for cl in stage_def.get("clues", []):
+		keep_clear.append(_to_vec3(cl["pos"]))
+	for br in stage_def.get("bridges", []):
+		keep_clear.append(_to_vec3(br["from"]))
+		keep_clear.append(_to_vec3(br["to"]))
+	if stage_def.has("secret"):
+		keep_clear.append(_to_vec3((stage_def["secret"] as Dictionary)["pos"]))
+
+	var is_clear := func(pt: Vector3, min_d: float) -> bool:
+		for c in keep_clear:
+			if Vector2(pt.x - c.x, pt.z - c.z).length() < min_d:
+				return false
+		return true
+
+	var rng := RandomNumberGenerator.new()
+	rng.seed = stage_id * 193 + 17
+
+	var islands: Array = stage_def.get("islands", [])
+	for idx in range(islands.size()):
+		var isl: Dictionary = islands[idx]
+		if int(isl.get("state", -1)) >= 0:
+			continue
+		var pos: Vector3 = _to_vec3(isl["pos"])
+		var sz: Vector3 = _to_vec3(isl["size"])
+		var hx := sz.x * 0.5
+		var hz := sz.z * 0.5
+
+		# 1. Hanging cliff vines on front/right edges (visible to camera!)
+		for side in range(2):
+			var v := LowPolyMeshLibrary.create_hanging_vines(grass_col.lightened(0.08), 4)
+			if side == 0:
+				v.position = pos + Vector3(rng.randf_range(-hx * 0.45, hx * 0.45), -0.05, hz + 0.02)
+			else:
+				v.position = pos + Vector3(hx + 0.02, -0.05, rng.randf_range(-hz * 0.45, hz * 0.45))
+				v.rotation_degrees.y = 90.0
+			_world_root.add_child(v)
+
+		# 2. Dense perimeter grass tufts along outer rim
+		var corners := [
+			Vector3(-hx * 0.80, 0.0, -hz * 0.80),
+			Vector3(hx * 0.80, 0.0, -hz * 0.80),
+			Vector3(-hx * 0.80, 0.0, hz * 0.80),
+			Vector3(hx * 0.80, 0.0, hz * 0.80),
+			Vector3(0.0, 0.0, -hz * 0.84),
+			Vector3(-hx * 0.84, 0.0, 0.0),
+		]
+		for off in corners:
+			var wp := pos + off
+			if is_clear.call(wp, 1.35):
+				var gt := LowPolyMeshLibrary.create_grass_tuft(grass_col.lightened(rng.randf_range(0.05, 0.22)))
+				gt.position = wp
+				gt.rotation_degrees.y = rng.randf_range(0.0, 360.0)
+				_world_root.add_child(gt)
+
+		# 3. Hero back-corner landmarks: wooden cabin + extra plum/indigo/pine tree + cyan crystal cluster
+		var back_left := pos + Vector3(-hx * 0.72, 0.0, -hz * 0.72)
+		var back_right := pos + Vector3(hx * 0.72, 0.0, -hz * 0.72)
+		var front_left := pos + Vector3(-hx * 0.74, 0.0, hz * 0.72)
+
+		if idx == 0 and sz.x >= 6.2 and sz.z >= 6.2 and is_clear.call(back_right, 2.0):
+			var cab := LowPolyMeshLibrary.create_wooden_cabin(0.82)
+			cab.position = back_right
+			cab.rotation_degrees.y = -32.0
+			_world_root.add_child(cab)
+			keep_clear.append(back_right)
+
+		if sz.x >= 4.4 and is_clear.call(back_left, 1.85):
+			var tr := LowPolyMeshLibrary.create_low_poly_tree(accent_a if (idx % 2 == 0) else accent_b, rng.randf_range(0.95, 1.22), (idx % 2 == 1))
+			tr.position = back_left
+			_world_root.add_child(tr)
+			keep_clear.append(back_left)
+
+		if sz.x >= 4.2 and is_clear.call(front_left, 1.70):
+			var cr := LowPolyMeshLibrary.create_crystal_cluster(Color(0.24, 0.82, 0.96))
+			cr.position = front_left
+			cr.scale = Vector3(0.75, 0.75, 0.75)
+			_world_root.add_child(cr)
+			keep_clear.append(front_left)

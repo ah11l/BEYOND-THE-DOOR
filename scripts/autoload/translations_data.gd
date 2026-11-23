@@ -1,14 +1,21 @@
 class_name TranslationsData
 extends RefCounted
 
-## Embedded bilingual translation tables (120 stages across 6 worlds, merged emotional story,
-## 3D opening cinematic, 6 world bosses, difficulty modes, and character wardrobe).
+## Embedded bilingual translation tables (V17 — 820 synced EN/AR keys).
 
 const TABLES := {
 	"en": {
 		"ad_hint_granted": "Hint unlocked!",
 		"ad_offline_notice": "No ad available offline — you can keep playing without internet.",
 		"ad_skip_granted": "Stage skipped! Moving to next stage.",
+		"boss_seals_label": "Seals",
+		"boss_shockwave_hit": "Hit by Guardian shockwave! Jump over the glowing ring.",
+		"boss_title_w1": "Guardian of the Forgotten",
+		"boss_title_w2": "Whispering Sentinel",
+		"boss_title_w3": "Clockwork Guardian",
+		"boss_title_w4": "Abyss Watcher",
+		"boss_title_w5": "Echo of Fear",
+		"boss_title_w6": "The Final Echo",
 		"boss_w1_defeated": "Guardian of the Forgotten: 'Your Echo grows bolder... listen closely to what it hides.'",
 		"boss_w1_intro": "Guardian of the Forgotten: 'Turn back, traveler — every door you open wakes a sleeping wound.'",
 		"boss_w2_defeated": "Whispering Sentinel: 'The seal yields... yet the Forest remembers your footsteps.'",
@@ -823,6 +830,14 @@ const TABLES := {
 		"ad_hint_granted": "تم فتح التلميح!",
 		"ad_offline_notice": "لا يتوفر إعلان بدون إنترنت — يمكنك مواصلة اللعب أوفلاين.",
 		"ad_skip_granted": "تم تخطي المرحلة بنجاح!",
+		"boss_seals_label": "الأختام",
+		"boss_shockwave_hit": "أصابتك موجة الحارس! اقفز فوق الحلقة المضيئة لتفاديها.",
+		"boss_title_w1": "حارس الجزر المنسية",
+		"boss_title_w2": "حارس غابة الهمس",
+		"boss_title_w3": "حارس الساعات المتوقفة",
+		"boss_title_w4": "حارس الهاوية الصامتة",
+		"boss_title_w5": "صدى الخوف",
+		"boss_title_w6": "الصدى الأخير",
 		"boss_w1_defeated": "حارس الجزر المنسية: «صداك يزداد جرأة… أنصت جيداً لما يخفيه عنك.»",
 		"boss_w1_intro": "حارس الجزر المنسية: «ارجع يا مسافر… كل بابٍ تفتحه يوقظ جرحاً نائماً.»",
 		"boss_w2_defeated": "حارس غابة الهمس: «انكسر الختم… لكن الغابة لا تزال تذكر خطواتك القديمة.»",

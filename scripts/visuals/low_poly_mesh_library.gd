@@ -613,3 +613,23 @@ static func create_celestial_ring(radius: float, color: Color) -> MeshInstance3D
 	ring.mesh = torus
 	ring.material_override = make_flat_material(color, 0.2, color, 1.0)
 	return ring
+
+
+static func create_hanging_vines(color: Color = Color(0.18, 0.44, 0.36), count: int = 4) -> Node3D:
+	## Lush hanging moss & vine strands draping over floating island cliff edges (matching 254211.png).
+	var root := Node3D.new()
+	root.name = "HangingVines"
+	var mat := make_flat_material(color, 0.85, color.lightened(0.2), 0.12)
+	for i in range(count):
+		var strand := MeshInstance3D.new()
+		var cyl := CylinderMesh.new()
+		var h := 0.85 + float(i % 3) * 0.45
+		cyl.top_radius = 0.055
+		cyl.bottom_radius = 0.015
+		cyl.height = h
+		cyl.radial_segments = 4
+		strand.mesh = cyl
+		strand.position = Vector3((float(i) - float(count - 1) * 0.5) * 0.24, -h * 0.5, 0.0)
+		strand.material_override = mat
+		root.add_child(strand)
+	return root
