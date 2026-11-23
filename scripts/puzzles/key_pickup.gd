@@ -109,3 +109,6 @@ func _collect() -> void:
 	set_process(false)
 	AudioManager.play_sfx("key_pickup")
 	key_collected.emit(key_id)
+
+func get_interact_icon_type() -> String:
+	return "hand"

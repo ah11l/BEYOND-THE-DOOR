@@ -134,3 +134,6 @@ func interact(player: Node) -> void:
 		AudioManager.play_sfx("door_locked")
 		return
 	door_activated.emit(self, player)
+
+func get_interact_icon_type() -> String:
+	return "door"

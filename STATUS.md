@@ -1,22 +1,23 @@
-# BEYOND THE DOOR (ما وراء الباب) — Project Status (V10)
+# BEYOND THE DOOR (ما وراء الباب) — Project Status (V16 Complete Overhaul)
 
 **Studio:** majnon.studio (مجنون استديو)  
 **Engine:** Godot 4.5.2 (`GL Compatibility` / GDScript)  
 **Repository:** `ah11l/BEYOND-THE-DOOR`
 
-## Implemented & Verified in Source (V10)
-- **120 Stages across 6 Worlds (20 stages/world)** with 120 Memory Crystals, 4 Crystal Powers (10 / 25 / 45 / 60 crystals), and 3 Endings in Stage 120 (Stop, Restart, and Secret Ending "Liberation" at 60 crystals).
-- **V10 Asset Integrity Fix:**
-  - Converted `assets/icons/majnon_studio_logo.png` from misnamed JPEG bytes to a genuine PNG (`\x89PNG\r\n\x1a\n`), eliminating `ERR_FILE_CORRUPT` during Godot resource import.
-  - Added automated magic-byte asset verification (PNG, TTF, SVG, WAV) to `tools/qa_stage_audit.py`.
-- **V9 Gameplay & Physics Fixes (Included Cumulatively):**
-  - `KeyPickup` & `MemorySecret`: Added `set_state_active(active)` disabling `Area3D` monitoring, monitorable, collision layer/mask, and `CollisionShape3D` when hidden by `room_state` (42 state-bound keys & 42 state-bound memory crystals).
-  - `EchoGhost` & `EchoRecorder`: Echo replay checks recorded `world_side` and `room_state` against live player state every physics frame, disabling visibility and collision when out of sync.
-  - `PlayerController` & `GravityZone`: Tracks overlapping active zones by `zone_id` (`enter_gravity_zone` / `exit_gravity_zone`).
-  - `StageBuilder`: Fixed `skip_stage` rewarded ad cap to `< GameState.TOTAL_STAGES` (120) and removed duplicate `match`/threshold branches.
-- **CI/CD & Android Export (Verified Green on GitHub Actions):**
-  - `.github/workflows/main.yml` (`barichello/godot-ci:4.5.2`) builds both **Debug APK** (`beyond-the-door-debug-apk`) and **Signed Google Play Release AAB** (`beyond-the-door-google-play-aab`) with Gradle Build, `android/.build_version = 4.5.2.stable`, and automatic AdMob `APPLICATION_ID` injection into `AndroidManifest.xml`.
+## Implemented & Statically Verified in Source (V16)
+- **Visual Redesign (Reference-Aligned, Restrained Cosmic Style):**
+  - `low_poly_mesh_library.gd` & `stage_builder.gd`: Restrained deep-navy, muted indigo, dark sage-moss grass rims, subdued turquoise crystals, layered canopy & pine trees (with layer-32 camera occlusion fade), dark-timber cabins, and luminous waterfalls across all 6 worlds while preserving the approved hooded protagonist silhouette.
+- **Intelligent Dynamic Camera (`iso_camera.gd`):**
+  - Initial stage overview glide framing spawn & layout, smooth velocity lookahead near corners/edges, elevation/span zoom adaptation, layer-32 prop occlusion handling, and 3D cinematic shot support.
+- **Contextual Circular Interaction UI & Parchment Notes (`game_hud.gd`):**
+  - Replaced permanent bottom text bar with a compact 76×76 circular icon button (Hand, Book, Door, Search) projected safely near the active target, plus an aged Parchment Scroll reading panel («ملاحظة قديمة» / "Ancient Note") for Clue Stones.
+- **Merged Emotional Story, 3D Opening Cinematic & 6 World Bosses (`translations_data.gd`, `guardian_boss.gd`, `stage_builder.gd`):**
+  - Updated all 6 worlds (الجزر المنسية، غابة الهمس، مدينة الساعات المتوقفة، الهاوية الصامتة، بحر المرايا، ما وراء الباب), added skippable 3D Opening Cinematic on Stage 1, and added Guardian/Echo Boss Sentinels on Stages 20, 40, 60, 80, 100, and 120 (812 synced AR/EN keys).
+- **Difficulty Modes & Character Wardrobe (`save_manager.gd`, `game_state.gd`, `main_menu.gd`):**
+  - 3 difficulty modes (Story / Normal / Master), 5 crystal-unlocked character cloak/lantern styles (`0/10/25/45/60 ◆`), and toggleable subtle ground-rune Puzzle Guides.
+- **Cumulative V9/V10 Fixes Included:**
+  - Hidden room-state pickups disable `Area3D` monitoring/collision; Echo Ghost syncs `world_side` & `room_state` with luminous path trail; overlapping `GravityZone`s tracked by `zone_id`; `skip_stage` works up to Stage 120; `majnon_studio_logo.png` converted to genuine PNG; CI `.github/workflows/main.yml` builds Debug APK & Signed Google Play AAB.
 
-## Pending Device & Release Verification
-- Live Android testing of V9/V10 fixes on the latest Debug APK artifact (state-bound pickups, Echo state sync, overlapping gravity zones, and studio logo in pause menu).
-- Live AdMob ad verification via Google Play Console Internal Testing using `beyond-the-door-google-play-aab`.
+## Pending Live Device Verification
+- Real Android device testing of the compiled V16 Debug APK (dynamic camera feel, contextual circular button placement across aspect ratios, 3D opening cinematic, boss encounters, and wardrobe switching).
+- Live AdMob ad testing via Google Play Console Internal Testing using the signed AAB.

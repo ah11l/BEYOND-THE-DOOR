@@ -45,3 +45,6 @@ func get_prompt_key() -> String:
 func interact(_player: Node) -> void:
 	AudioManager.play_sfx("ui_click")
 	clue_read.emit(clue_key)
+
+func get_interact_icon_type() -> String:
+	return "book"

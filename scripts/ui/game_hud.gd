@@ -1,27 +1,33 @@
 class_name GameHUD
 extends CanvasLayer
 
-## Ergonomic mobile-first HUD for wide Android screens (16:9 to 21:9):
-## - Thumb-zone joystick and Echo/Jump buttons pulled comfortably inward from screen edges
-## - Clean top bar with Pause, Help/Tutorial, Stages, Memories, Reset, Hint, Skip, and Counters
-## - Interactive Arabic/English Tutorial overlay shown automatically on Stage 1
-## - Zero unsupported emojis (all crisp Arabic/English labels and Noto-supported symbols)
+## Redesigned mobile-first HUD matching 254211.png & 254212.png:
+## - Contextual circular icon interaction button (Hand / Book / Door / Search) projected safely near target
+## - Aged Parchment Scroll Reading Panel ("ملاحظة قديمة" / "Ancient Note") for Clue Stones & Lore
+## - 3D Opening Cinematic letterbox subtitle overlay with Skip control
+## - Difficulty & Puzzle Guides toggles inside Settings
 
 signal restart_checkpoint_requested
 signal next_stage_requested
 signal hint_ad_requested
 signal skip_stage_ad_requested
 
+const CONTEXT_ICONS := {
+	"hand": "res://assets/icons/icon_hand.svg",
+	"book": "res://assets/icons/icon_book.svg",
+	"door": "res://assets/icons/icon_door.svg",
+	"search": "res://assets/icons/icon_search.svg",
+}
+
 var _root: Control
 var _top_margin: MarginContainer
 var _stage_title_label: Label
 var _objective_label: Label
-var _secret_count_label: Label
 var _key_pill: PanelContainer
 var _key_count_label: Label
 var _toast_panel: PanelContainer
 var _toast_label: Label
-var _interact_btn: Button
+var _context_btn: Button
 var _echo_btn: Button
 var _jump_btn: Button
 var _skip_btn: Button
@@ -37,6 +43,8 @@ var _toast_timer: float = 0.0
 var _current_stage_id: int = 1
 var _current_title_key: String = ""
 var _current_objective_key: String = ""
+var _context_target: Node = null
+var _context_cam: Camera3D = null
 
 
 func _ready() -> void:
@@ -58,6 +66,7 @@ func _process(delta: float) -> void:
 		toggle_pause()
 	if Input.is_action_just_pressed("restart_checkpoint") and not get_tree().paused:
 		restart_checkpoint_requested.emit()
+	_update_context_button_position()
 
 
 func set_stage_info(stage_id: int, title_key: String, objective_key: String) -> void:
@@ -67,8 +76,7 @@ func set_stage_info(stage_id: int, title_key: String, objective_key: String) -> 
 	_refresh_labels()
 	if _skip_btn != null:
 		_skip_btn.visible = (stage_id < GameState.TOTAL_STAGES)
-	# Auto-open Arabic/English interactive tutorial on Stage 1 if not seen yet
-	if stage_id == 1 and not bool(SaveManager.get_setting("tutorial_seen", false)):
+	if stage_id == 1 and not bool(SaveManager.get_setting("tutorial_seen", false)) and SaveManager.is_intro_seen():
 		open_tutorial()
 
 
@@ -85,7 +93,7 @@ func update_key_counter(held: int, required: int) -> void:
 		return
 	if required > 0:
 		_key_pill.visible = true
-		_key_count_label.text = "%s: %d / %d" % [LocalizationManager.t("keys_label"), held, required]
+		_key_count_label.text = "★ %d / %d" % [held, required]
 	else:
 		_key_pill.visible = false
 
@@ -96,24 +104,59 @@ func update_echo_state(echo_state: int, progress: float) -> void:
 	match echo_state:
 		EchoRecorder.EchoState.RECORDING:
 			var secs := GameState.get_echo_duration() * (1.0 - progress)
-			_echo_btn.text = "%s\n%.1fs" % [LocalizationManager.t("hud_echo_rec"), secs]
-			UIStyleHelper.style_circle_button(_echo_btn, 100, Color(1.0, 0.38, 0.45), 17)
+			_echo_btn.text = "%.1fs" % secs
+			UIStyleHelper.style_circle_button(_echo_btn, 96, Color(0.95, 0.36, 0.44), 17)
 		EchoRecorder.EchoState.REPLAYING:
-			_echo_btn.text = "%s\n%d%%" % [LocalizationManager.t("hud_echo_play"), int(progress * 100.0)]
-			UIStyleHelper.style_circle_button(_echo_btn, 100, UIStyleHelper.ACCENT_CYAN, 17)
+			_echo_btn.text = "%d%%" % int(progress * 100.0)
+			UIStyleHelper.style_circle_button(_echo_btn, 96, UIStyleHelper.ACCENT_CYAN, 17)
 		_:
-			_echo_btn.text = LocalizationManager.t("hud_echo")
-			UIStyleHelper.style_circle_button(_echo_btn, 100, UIStyleHelper.ACCENT_CYAN, 19)
+			_echo_btn.text = ""
+			UIStyleHelper.style_circle_button(_echo_btn, 96, UIStyleHelper.ACCENT_CYAN, 18)
+			UIStyleHelper.apply_icon(_echo_btn, "res://assets/icons/icon_echo.svg", 38)
+
+
+func set_interaction_target(target: Node, cam: Camera3D) -> void:
+	_context_target = target
+	_context_cam = cam
+	if _context_btn == null:
+		return
+	if target == null or not is_instance_valid(target):
+		_context_btn.visible = false
+		return
+	var icon_kind := "hand"
+	if target.has_method("get_interact_icon_type"):
+		icon_kind = str(target.call("get_interact_icon_type"))
+	var icon_path := str(CONTEXT_ICONS.get(icon_kind, CONTEXT_ICONS["hand"]))
+	UIStyleHelper.apply_icon(_context_btn, icon_path, 34)
+	_context_btn.visible = true
+	_update_context_button_position()
 
 
 func set_interaction_prompt(prompt_key: String) -> void:
-	if _interact_btn == null:
+	# Backward-compatible fallback if called directly
+	if _context_btn == null:
 		return
-	if prompt_key.is_empty():
-		_interact_btn.visible = false
-	else:
-		_interact_btn.visible = true
-		_interact_btn.text = "✦ " + LocalizationManager.t(prompt_key)
+	_context_btn.visible = not prompt_key.is_empty()
+
+
+func _update_context_button_position() -> void:
+	if _context_btn == null or not _context_btn.visible:
+		return
+	if _context_target == null or not is_instance_valid(_context_target) or not (_context_target is Node3D):
+		_context_btn.visible = false
+		return
+	var vp_size := get_viewport().get_visible_rect().size
+	var target_pos := Vector2(vp_size.x * 0.62, vp_size.y * 0.50)
+	if _context_cam != null and is_instance_valid(_context_cam):
+		var world_pt := (_context_target as Node3D).global_position + Vector3(0.0, 1.45, 0.0)
+		if not _context_cam.is_position_behind(world_pt):
+			var sp := _context_cam.unproject_position(world_pt)
+			target_pos = sp + Vector2(46.0, -34.0)
+	# Clamp cleanly inside safe gameplay zone (never overlapping top bar, joystick, or Echo/Jump buttons!)
+	var half := _context_btn.size * 0.5
+	target_pos.x = clampf(target_pos.x, vp_size.x * 0.28, vp_size.x * 0.78)
+	target_pos.y = clampf(target_pos.y, 110.0, vp_size.y - 210.0)
+	_context_btn.position = target_pos - half
 
 
 func show_toast(message_key: String, duration: float = 4.2) -> void:
@@ -122,6 +165,134 @@ func show_toast(message_key: String, duration: float = 4.2) -> void:
 	_toast_label.text = LocalizationManager.t(message_key)
 	_toast_panel.visible = true
 	_toast_timer = duration
+
+
+func show_parchment_note(clue_key: String) -> void:
+	## Aged Parchment Scroll Reading Panel matching 254212.png ("ملاحظة قديمة" / "Ancient Note").
+	var overlay := ColorRect.new()
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.color = Color(0.02, 0.03, 0.08, 0.78)
+	_root.add_child(overlay)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.add_child(center)
+
+	var scroll_card := PanelContainer.new()
+	scroll_card.custom_minimum_size = Vector2(540, 290)
+	var parch_style := StyleBoxFlat.new()
+	parch_style.bg_color = Color(0.84, 0.74, 0.58, 0.98)
+	parch_style.border_color = Color(0.45, 0.30, 0.16, 1.0)
+	parch_style.set_border_width_all(3)
+	parch_style.set_corner_radius_all(18)
+	parch_style.content_margin_left = 32
+	parch_style.content_margin_right = 32
+	parch_style.content_margin_top = 24
+	parch_style.content_margin_bottom = 24
+	scroll_card.add_theme_stylebox_override("panel", parch_style)
+	center.add_child(scroll_card)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 16)
+	scroll_card.add_child(vbox)
+
+	var hdr_row := HBoxContainer.new()
+	vbox.add_child(hdr_row)
+
+	var title_lbl := Label.new()
+	title_lbl.text = LocalizationManager.t("parchment_note_title")
+	title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title_lbl.add_theme_font_size_override("font_size", 24)
+	title_lbl.add_theme_color_override("font_color", Color(0.22, 0.12, 0.06))
+	hdr_row.add_child(title_lbl)
+
+	var close_x := Button.new()
+	close_x.text = "✕"
+	UIStyleHelper.style_circle_button(close_x, 42, Color(0.28, 0.18, 0.12), 18)
+	close_x.pressed.connect(func() -> void:
+		AudioManager.play_sfx("ui_click")
+		overlay.queue_free()
+		get_tree().paused = false
+	)
+	hdr_row.add_child(close_x)
+
+	var body_lbl := Label.new()
+	body_lbl.text = LocalizationManager.t(clue_key)
+	body_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	body_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body_lbl.add_theme_font_size_override("font_size", 19)
+	body_lbl.add_theme_color_override("font_color", Color(0.16, 0.10, 0.06))
+	vbox.add_child(body_lbl)
+
+	LocalizationManager.apply_layout_direction(overlay)
+	get_tree().paused = true
+
+
+func play_cinematic_subtitles(line_keys: Array, on_finished: Callable) -> void:
+	## Letterbox cinematic subtitle bar + Skip button for the 3D Opening Cinematic.
+	var cine := Control.new()
+	cine.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_root.add_child(cine)
+
+	var top_bar := ColorRect.new()
+	top_bar.anchor_right = 1.0
+	top_bar.offset_bottom = 64
+	top_bar.color = Color(0.01, 0.015, 0.04, 0.92)
+	cine.add_child(top_bar)
+
+	var bot_bar := ColorRect.new()
+	bot_bar.anchor_top = 1.0
+	bot_bar.anchor_right = 1.0
+	bot_bar.anchor_bottom = 1.0
+	bot_bar.offset_top = -128
+	bot_bar.color = Color(0.01, 0.015, 0.04, 0.92)
+	cine.add_child(bot_bar)
+
+	var sub_lbl := Label.new()
+	sub_lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	sub_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sub_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	sub_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	sub_lbl.add_theme_font_size_override("font_size", 22)
+	sub_lbl.add_theme_color_override("font_color", Color(0.96, 0.94, 0.88))
+	bot_bar.add_child(sub_lbl)
+
+	var skip_btn := Button.new()
+	skip_btn.text = LocalizationManager.t("cine_skip")
+	skip_btn.anchor_left = 1.0
+	skip_btn.anchor_right = 1.0
+	skip_btn.offset_left = -150
+	skip_btn.offset_right = -24
+	skip_btn.offset_top = 14
+	skip_btn.offset_bottom = 52
+	UIStyleHelper.style_button(skip_btn, UIStyleHelper.ACCENT_GOLD, 16, 16)
+	cine.add_child(skip_btn)
+
+	var done := {"v": false}
+	var finish := func() -> void:
+		if done["v"]:
+			return
+		done["v"] = true
+		cine.queue_free()
+		on_finished.call()
+
+	skip_btn.pressed.connect(func() -> void:
+		AudioManager.play_sfx("ui_click")
+		finish.call()
+	)
+
+	var tw := create_tween()
+	for k in line_keys:
+		tw.tween_callback(func() -> void:
+			sub_lbl.modulate.a = 0.0
+			sub_lbl.text = LocalizationManager.t(str(k))
+		)
+		tw.tween_property(sub_lbl, "modulate:a", 1.0, 0.45)
+		tw.tween_interval(2.05)
+		tw.tween_property(sub_lbl, "modulate:a", 0.0, 0.35)
+	tw.tween_callback(finish)
 
 
 func show_stage_complete(stage_id: int) -> void:
@@ -154,11 +325,10 @@ func _build_hud() -> void:
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_root)
 
-	# Top bar with generous side margins for Android rounded corners / camera cutouts
 	_top_margin = MarginContainer.new()
 	_top_margin.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_top_margin.add_theme_constant_override("margin_left", 44)
-	_top_margin.add_theme_constant_override("margin_right", 44)
+	_top_margin.add_theme_constant_override("margin_left", 40)
+	_top_margin.add_theme_constant_override("margin_right", 40)
 	_top_margin.add_theme_constant_override("margin_top", 18)
 	_top_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(_top_margin)
@@ -168,31 +338,27 @@ func _build_hud() -> void:
 	top_hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_top_margin.add_child(top_hbox)
 
-	# Left group: Pause + Help + Stages + Reset
 	var pause_btn := Button.new()
 	pause_btn.text = ""
-	UIStyleHelper.style_button(pause_btn, UIStyleHelper.BORDER_SUBTLE, 14, 20)
-	UIStyleHelper.apply_icon(pause_btn, "res://assets/icons/icon_pause.svg", 26)
-	pause_btn.custom_minimum_size = Vector2(54, 52)
+	UIStyleHelper.style_circle_button(pause_btn, 52, UIStyleHelper.BORDER_SUBTLE, 18)
+	UIStyleHelper.apply_icon(pause_btn, "res://assets/icons/icon_pause.svg", 24)
 	pause_btn.pressed.connect(toggle_pause)
 	top_hbox.add_child(pause_btn)
 
 	var reset_btn := Button.new()
 	reset_btn.text = ""
-	UIStyleHelper.style_button(reset_btn, UIStyleHelper.BORDER_SUBTLE, 14, 20)
+	UIStyleHelper.style_circle_button(reset_btn, 52, UIStyleHelper.BORDER_SUBTLE, 18)
 	UIStyleHelper.apply_icon(reset_btn, "res://assets/icons/icon_reset.svg", 24)
-	reset_btn.custom_minimum_size = Vector2(50, 50)
 	reset_btn.pressed.connect(func() -> void: restart_checkpoint_requested.emit())
 	top_hbox.add_child(reset_btn)
 
-	# Center stage header pill
 	var spacer_l := Control.new()
 	spacer_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	spacer_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top_hbox.add_child(spacer_l)
 
 	var title_pill := PanelContainer.new()
-	title_pill.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style(UIStyleHelper.BG_PANEL, UIStyleHelper.BORDER_SUBTLE, 16, 1))
+	title_pill.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style(Color(0.06, 0.08, 0.18, 0.82), Color(0.55, 0.68, 0.92, 0.45), 20, 1))
 	top_hbox.add_child(title_pill)
 
 	var title_vbox := VBoxContainer.new()
@@ -200,14 +366,14 @@ func _build_hud() -> void:
 
 	_stage_title_label = Label.new()
 	_stage_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_stage_title_label.add_theme_font_size_override("font_size", 18)
+	_stage_title_label.add_theme_font_size_override("font_size", 17)
 	_stage_title_label.add_theme_color_override("font_color", UIStyleHelper.ACCENT_GOLD)
 	title_vbox.add_child(_stage_title_label)
 
 	_objective_label = Label.new()
 	_objective_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_objective_label.add_theme_font_size_override("font_size", 14)
-	_objective_label.add_theme_color_override("font_color", UIStyleHelper.TEXT_MUTED)
+	_objective_label.add_theme_font_size_override("font_size", 13)
+	_objective_label.add_theme_color_override("font_color", UIStyleHelper.TEXT_PRIMARY)
 	title_vbox.add_child(_objective_label)
 
 	var spacer_r := Control.new()
@@ -215,11 +381,9 @@ func _build_hud() -> void:
 	spacer_r.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top_hbox.add_child(spacer_r)
 
-	# Clean minimal right group: Key Pill + Crystal Counter only (Hint/Skip inside Pause Menu)
-
 	_key_pill = PanelContainer.new()
 	_key_pill.visible = false
-	_key_pill.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style(UIStyleHelper.BG_PANEL, UIStyleHelper.ACCENT_GOLD, 14, 1))
+	_key_pill.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style(Color(0.06, 0.08, 0.18, 0.84), UIStyleHelper.ACCENT_GOLD, 22, 1))
 	top_hbox.add_child(_key_pill)
 	_key_count_label = Label.new()
 	_key_count_label.add_theme_font_size_override("font_size", 16)
@@ -228,90 +392,84 @@ func _build_hud() -> void:
 
 	var crystal_btn := Button.new()
 	crystal_btn.name = "CrystalBtn"
-	UIStyleHelper.style_button(crystal_btn, UIStyleHelper.ACCENT_CYAN, 16, 18)
-	UIStyleHelper.apply_icon(crystal_btn, "res://assets/icons/icon_crystal.svg", 26)
+	UIStyleHelper.style_button(crystal_btn, UIStyleHelper.ACCENT_CYAN, 22, 16)
+	UIStyleHelper.apply_icon(crystal_btn, "res://assets/icons/icon_crystal.svg", 24)
 	crystal_btn.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	crystal_btn.custom_minimum_size = Vector2(96, 52)
+	crystal_btn.custom_minimum_size = Vector2(96, 48)
 	crystal_btn.pressed.connect(_open_codex)
 	top_hbox.add_child(crystal_btn)
-	_secret_count_label = null
 
-	# Bottom controls container (ALWAYS LTR so left thumb = joystick, right thumb = Echo + Jump)
+	# Bottom controls container (ALWAYS LTR)
 	var controls_layer := Control.new()
 	controls_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
 	controls_layer.layout_direction = Control.LAYOUT_DIRECTION_LTR
 	controls_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(controls_layer)
 
-	# Ergonomic Left-Thumb Joystick (pulled comfortably inward from corner)
-	# Full left-half floating touchpad (touch anywhere on the left side to move smoothly)
 	var joystick := TouchJoystick.new()
 	joystick.anchor_left = 0.0
 	joystick.anchor_top = 0.14
 	joystick.anchor_right = 0.48
 	joystick.anchor_bottom = 1.0
-	joystick.offset_left = 0
-	joystick.offset_top = 0
-	joystick.offset_right = 0
-	joystick.offset_bottom = 0
 	controls_layer.add_child(joystick)
 
-	# Bottom-center contextual prompt & toast pill
+	# Floating contextual circular interaction button (Hand / Book / Door / Search)
+	_context_btn = Button.new()
+	_context_btn.visible = false
+	_context_btn.text = ""
+	UIStyleHelper.style_circle_button(_context_btn, 76, UIStyleHelper.ACCENT_CYAN, 20)
+	UIStyleHelper.apply_icon(_context_btn, CONTEXT_ICONS["hand"], 34)
+	_context_btn.pressed.connect(func() -> void: GameState.emit_touch_interact())
+	controls_layer.add_child(_context_btn)
+
+	# Bottom-center toast pill only (NO permanent rectangular interact text bar!)
 	var bottom_center := VBoxContainer.new()
 	bottom_center.anchor_left = 0.5
 	bottom_center.anchor_right = 0.5
 	bottom_center.anchor_top = 1.0
 	bottom_center.anchor_bottom = 1.0
-	bottom_center.offset_left = -165
-	bottom_center.offset_right = 165
-	bottom_center.offset_top = -175
-	bottom_center.offset_bottom = -34
+	bottom_center.offset_left = -190
+	bottom_center.offset_right = 190
+	bottom_center.offset_top = -120
+	bottom_center.offset_bottom = -28
 	bottom_center.alignment = BoxContainer.ALIGNMENT_END
-	bottom_center.add_theme_constant_override("separation", 10)
 	bottom_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(bottom_center)
 
-	_interact_btn = Button.new()
-	_interact_btn.visible = false
-	UIStyleHelper.style_button(_interact_btn, UIStyleHelper.ACCENT_GOLD, 22, 19)
-	_interact_btn.custom_minimum_size = Vector2(200, 48)
-	_interact_btn.pressed.connect(func() -> void: GameState.emit_touch_interact())
-	bottom_center.add_child(_interact_btn)
-
 	_toast_panel = PanelContainer.new()
 	_toast_panel.visible = false
-	_toast_panel.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style(UIStyleHelper.BG_PANEL, UIStyleHelper.ACCENT_CYAN, 18, 2))
+	_toast_panel.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style(Color(0.06, 0.08, 0.18, 0.88), UIStyleHelper.ACCENT_CYAN, 18, 1))
 	bottom_center.add_child(_toast_panel)
 
 	_toast_label = Label.new()
 	_toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_toast_label.add_theme_font_size_override("font_size", 17)
+	_toast_label.add_theme_font_size_override("font_size", 16)
 	_toast_label.add_theme_color_override("font_color", UIStyleHelper.TEXT_PRIMARY)
 	_toast_panel.add_child(_toast_label)
 
-	# Ergonomic Right-Thumb Echo + Jump Buttons (pulled comfortably inward from corner)
 	var right_controls := HBoxContainer.new()
 	right_controls.anchor_left = 1.0
 	right_controls.anchor_right = 1.0
 	right_controls.anchor_top = 1.0
 	right_controls.anchor_bottom = 1.0
-	right_controls.offset_left = -330
-	right_controls.offset_right = -96
-	right_controls.offset_top = -182
-	right_controls.offset_bottom = -64
-	right_controls.add_theme_constant_override("separation", 22)
+	right_controls.offset_left = -316
+	right_controls.offset_right = -82
+	right_controls.offset_top = -172
+	right_controls.offset_bottom = -58
+	right_controls.add_theme_constant_override("separation", 20)
 	controls_layer.add_child(right_controls)
 
 	_echo_btn = Button.new()
-	_echo_btn.text = LocalizationManager.t("hud_echo")
-	UIStyleHelper.style_circle_button(_echo_btn, 100, UIStyleHelper.ACCENT_CYAN, 19)
+	_echo_btn.text = ""
+	UIStyleHelper.style_circle_button(_echo_btn, 96, UIStyleHelper.ACCENT_CYAN, 18)
+	UIStyleHelper.apply_icon(_echo_btn, "res://assets/icons/icon_echo.svg", 38)
 	_echo_btn.pressed.connect(func() -> void: GameState.emit_touch_echo())
 	right_controls.add_child(_echo_btn)
 
 	_jump_btn = Button.new()
 	_jump_btn.text = "▲"
-	UIStyleHelper.style_circle_button(_jump_btn, 110, UIStyleHelper.BORDER_SUBTLE, 32)
+	UIStyleHelper.style_circle_button(_jump_btn, 106, UIStyleHelper.BORDER_SUBTLE, 30)
 	_jump_btn.pressed.connect(func() -> void: GameState.emit_touch_jump())
 	right_controls.add_child(_jump_btn)
 
@@ -437,7 +595,7 @@ func _build_pause_overlay() -> void:
 		var btn := Button.new()
 		btn.name = str(b["name"])
 		btn.set_meta("loc_key", str(b["key"]))
-		btn.custom_minimum_size = Vector2(0, 50)
+		btn.custom_minimum_size = Vector2(0, 48)
 		UIStyleHelper.style_button(btn)
 		btn.pressed.connect(b["cb"] as Callable)
 		vbox.add_child(btn)
@@ -447,9 +605,14 @@ func _build_settings_overlay() -> void:
 	_settings_overlay = _make_modal_backdrop()
 	var panel := _make_responsive_modal_panel(_settings_overlay)
 
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	panel.add_child(scroll)
+
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 12)
-	panel.add_child(vbox)
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_theme_constant_override("separation", 10)
+	scroll.add_child(vbox)
 
 	var hdr := Label.new()
 	hdr.set_meta("loc_key", "menu_settings")
@@ -480,22 +643,45 @@ func _build_settings_overlay() -> void:
 	sfx_slider.value_changed.connect(func(v: float) -> void: SaveManager.set_setting("sfx_volume", v))
 	vbox.add_child(sfx_slider)
 
+	var diff_btn := Button.new()
+	diff_btn.name = "DiffBtn"
+	diff_btn.custom_minimum_size = Vector2(0, 48)
+	UIStyleHelper.style_button(diff_btn, UIStyleHelper.ACCENT_GOLD)
+	diff_btn.pressed.connect(func() -> void:
+		var cur := SaveManager.get_difficulty()
+		var nxt := "master" if cur == "normal" else ("story" if cur == "master" else "normal")
+		SaveManager.set_difficulty(nxt)
+		_refresh_labels()
+	)
+	vbox.add_child(diff_btn)
+
+	var guides_btn := Button.new()
+	guides_btn.name = "GuidesBtn"
+	guides_btn.custom_minimum_size = Vector2(0, 48)
+	UIStyleHelper.style_button(guides_btn, UIStyleHelper.ACCENT_CYAN)
+	guides_btn.pressed.connect(func() -> void:
+		var cur := bool(SaveManager.get_setting("puzzle_guides", true))
+		SaveManager.set_setting("puzzle_guides", not cur)
+		_refresh_labels()
+	)
+	vbox.add_child(guides_btn)
+
 	var lang_btn := Button.new()
 	lang_btn.set_meta("loc_key", "settings_toggle_lang")
-	lang_btn.custom_minimum_size = Vector2(0, 50)
+	lang_btn.custom_minimum_size = Vector2(0, 48)
 	UIStyleHelper.style_button(lang_btn, UIStyleHelper.ACCENT_CYAN)
 	lang_btn.pressed.connect(func() -> void: LocalizationManager.toggle_language())
 	vbox.add_child(lang_btn)
 
 	var gfx_btn := Button.new()
 	gfx_btn.name = "GfxBtn"
-	gfx_btn.custom_minimum_size = Vector2(0, 50)
+	gfx_btn.custom_minimum_size = Vector2(0, 48)
 	UIStyleHelper.style_button(gfx_btn)
 	gfx_btn.pressed.connect(func() -> void:
 		var cur := str(SaveManager.get_setting("graphics_quality", "medium"))
 		var nxt := "high" if cur == "medium" else ("low" if cur == "high" else "medium")
 		SaveManager.set_setting("graphics_quality", nxt)
-		gfx_btn.text = LocalizationManager.t("settings_graphics") + ": " + UIStyleHelper.quality_label_ar(nxt)
+		_refresh_labels()
 	)
 	vbox.add_child(gfx_btn)
 
@@ -510,7 +696,7 @@ func _build_settings_overlay() -> void:
 
 	var back_btn := Button.new()
 	back_btn.set_meta("loc_key", "menu_back")
-	back_btn.custom_minimum_size = Vector2(0, 50)
+	back_btn.custom_minimum_size = Vector2(0, 48)
 	UIStyleHelper.style_button(back_btn)
 	back_btn.pressed.connect(func() -> void: _settings_overlay.visible = false; _pause_overlay.visible = true)
 	vbox.add_child(back_btn)
@@ -564,8 +750,7 @@ func _open_stage_select() -> void:
 		list.add_child(grid)
 
 		var w_start := (w - 1) * 20 + 1
-		var w_count := 20
-		for offset in range(w_count):
+		for offset in range(20):
 			var sid := w_start + offset
 			var unlocked := SaveManager.is_stage_unlocked(sid)
 			var completed := SaveManager.is_stage_completed(sid)
@@ -695,8 +880,6 @@ func _refresh_labels() -> void:
 		_stage_title_label.text = "%d. %s" % [_current_stage_id, LocalizationManager.t(_current_title_key)]
 	if _objective_label != null and not _current_objective_key.is_empty():
 		_objective_label.text = LocalizationManager.t(_current_objective_key)
-	if _echo_btn != null:
-		_echo_btn.text = LocalizationManager.t("hud_echo")
 	var pause_hdr := _pause_overlay.find_child("PauseHeader", true, false) as Label
 	if pause_hdr != null:
 		pause_hdr.text = LocalizationManager.t("menu_paused")
@@ -704,6 +887,13 @@ func _refresh_labels() -> void:
 	var gfx_btn := _settings_overlay.find_child("GfxBtn", true, false) as Button
 	if gfx_btn != null:
 		gfx_btn.text = LocalizationManager.t("settings_graphics") + ": " + UIStyleHelper.quality_label_ar(str(SaveManager.get_setting("graphics_quality", "medium")))
+	var diff_btn := _settings_overlay.find_child("DiffBtn", true, false) as Button
+	if diff_btn != null:
+		diff_btn.text = LocalizationManager.t("settings_difficulty") + ": " + LocalizationManager.t("diff_" + SaveManager.get_difficulty())
+	var guides_btn := _settings_overlay.find_child("GuidesBtn", true, false) as Button
+	if guides_btn != null:
+		var g_on := bool(SaveManager.get_setting("puzzle_guides", true))
+		guides_btn.text = LocalizationManager.t("settings_puzzle_guides") + ": " + LocalizationManager.t("state_on" if g_on else "state_off")
 	_refresh_counters()
 
 
@@ -777,4 +967,5 @@ func show_story_chapter(world_idx: int, story_key: String) -> void:
 		get_tree().paused = false
 	)
 	vbox.add_child(cont_btn)
+	LocalizationManager.apply_layout_direction(overlay)
 	get_tree().paused = true

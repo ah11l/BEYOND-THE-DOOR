@@ -1,10 +1,10 @@
 extends Control
 
-## Lively Main Menu matching 251933.png:
-## - Fixed LTR split so frosted-glass buttons stay cleanly on the LEFT while the live 3D island shines on the RIGHT (ZERO overlap!)
-## - Real 3D twinkling starfield spheres + deep midnight gradient sky
-## - Animated vector-drawn interactive splash screen for مجنون استديو (majnon.studio) that waits for tap to enter
-## - Developer branding & clickable Instagram link inside Settings AND Credits
+## Redesigned Main Menu matching 254212.png:
+## - Fixed LTR split: Frosted-glass buttons on LEFT, rich 3D diorama island + equipped character on RIGHT
+## - Character Wardrobe / Cloak Shop unlocked via Memory Crystals
+## - Difficulty selector (Story / Normal / Master) + Puzzle Guides toggle + Replay Opening Cinematic
+## - Bilingual Arabic / English switcher + animated majnon.studio splash
 
 const STUDIO_INSTAGRAM_URL := "https://www.instagram.com/majnon.studio?gwpx=MXZkZm41emg3emk0bA=="
 static var _splash_shown: bool = false
@@ -16,10 +16,10 @@ var _modal_body: VBoxContainer
 var _confirm_reset: bool = false
 var _bg_cam: Camera3D
 var _bg_island: Node3D
+var _bg_hero: Node3D
 var _bg_time: float = 0.0
 
 
-## Inner procedural vector renderer for the majnon.studio spiral logo (crisp at any resolution, animates drawing itself!)
 class MajnonLogoCanvas extends Control:
 	var draw_progress: float = 0.0:
 		set(v):
@@ -42,7 +42,6 @@ class MajnonLogoCanvas extends Control:
 		var off_white := Color(0.96, 0.95, 0.91, 1.0)
 		var royal_blue := Color(0.19, 0.34, 0.98, 1.0)
 
-		# Exact square-spiral geometry matching 242372.png
 		var pts := PackedVector2Array([
 			Vector2(ox + s * 0.21, oy + s * 0.78),
 			Vector2(ox + s * 0.21, oy + s * 0.21),
@@ -56,7 +55,6 @@ class MajnonLogoCanvas extends Control:
 			Vector2(ox + s * 0.50, oy + s * 0.50),
 		])
 
-		# Compute total path length for smooth progressive stroke drawing
 		var seg_lens: Array[float] = []
 		var total_len := 0.0
 		for i in range(pts.size() - 1):
@@ -77,7 +75,6 @@ class MajnonLogoCanvas extends Control:
 			draw_circle(end_pt, stroke_w * 0.5, off_white)
 			rem -= seg_l
 
-		# Center royal-blue orb + soft halo pulse
 		var center := Vector2(ox + s * 0.50, oy + s * 0.50)
 		if glow_alpha > 0.01:
 			draw_circle(center, s * 0.18 * (0.9 + 0.25 * glow_alpha), Color(0.24, 0.45, 1.0, 0.28 * glow_alpha))
@@ -89,6 +86,7 @@ func _ready() -> void:
 	_build_live_3d_backdrop()
 	_build_ui()
 	LocalizationManager.language_changed.connect(_on_language_changed)
+	GameState.skin_changed.connect(_rebuild_backdrop_hero)
 	_on_language_changed(LocalizationManager.current_language, LocalizationManager.is_rtl())
 	if not _splash_shown:
 		_splash_shown = true
@@ -98,12 +96,11 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_bg_time += delta
 	if _bg_island != null:
-		_bg_island.position.y = -0.35 + sin(_bg_time * 1.1) * 0.14
+		_bg_island.position.y = -0.35 + sin(_bg_time * 1.05) * 0.12
 	if _bg_cam != null:
-		var sway := sin(_bg_time * 0.42) * 0.45
-		_bg_cam.position = Vector3(6.8 + sway, 7.6 + cos(_bg_time * 0.35) * 0.18, 9.2 - sway * 0.4)
-		# Look slightly to the left of the island so the island sits cleanly on the RIGHT half of the screen
-		_bg_cam.look_at(Vector3(-0.9, 0.7, 0.0), Vector3.UP)
+		var sway := sin(_bg_time * 0.38) * 0.42
+		_bg_cam.position = Vector3(6.8 + sway, 7.4 + cos(_bg_time * 0.32) * 0.16, 9.2 - sway * 0.4)
+		_bg_cam.look_at(Vector3(-0.9, 0.75, 0.0), Vector3.UP)
 
 
 func _build_live_3d_backdrop() -> void:
@@ -121,84 +118,95 @@ func _build_live_3d_backdrop() -> void:
 
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color(0.055, 0.075, 0.19)
+	env.background_color = Color(0.032, 0.044, 0.115)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.56, 0.50, 0.78)
-	env.ambient_light_energy = 0.88
+	env.ambient_light_color = Color(0.46, 0.44, 0.68)
+	env.ambient_light_energy = 0.82
 	env.glow_enabled = true
-	env.glow_intensity = 0.55
+	env.glow_intensity = 0.38
 	var we := WorldEnvironment.new()
 	we.environment = env
 	vp.add_child(we)
 
-	# Real 3D twinkling stars dome (100% visible on all Android GLES3 GPUs!)
 	_spawn_3d_starfield(vp, 110)
 
-	# 3-Point Atmospheric Lights matching 251933.png
 	var moon := DirectionalLight3D.new()
-	moon.light_color = Color(0.94, 0.90, 1.0)
-	moon.light_energy = 1.25
+	moon.light_color = Color(0.90, 0.88, 0.98)
+	moon.light_energy = 1.18
 	moon.rotation_degrees = Vector3(-42.0, 38.0, 0.0)
 	moon.shadow_enabled = true
 	moon.shadow_blur = 2.0
 	vp.add_child(moon)
 
 	var rose := DirectionalLight3D.new()
-	rose.light_color = Color(0.95, 0.48, 0.62)
-	rose.light_energy = 0.48
+	rose.light_color = Color(0.78, 0.42, 0.58)
+	rose.light_energy = 0.36
 	rose.rotation_degrees = Vector3(-20.0, -135.0, 0.0)
 	vp.add_child(rose)
 
 	var rim := DirectionalLight3D.new()
-	rim.light_color = Color(0.32, 0.78, 1.0)
-	rim.light_energy = 0.55
+	rim.light_color = Color(0.28, 0.68, 0.90)
+	rim.light_energy = 0.42
 	rim.rotation_degrees = Vector3(-30.0, 125.0, 0.0)
 	vp.add_child(rim)
 
-	# Floating diorama island placed cleanly on the RIGHT side (zero overlap with left buttons)
 	_bg_island = Node3D.new()
 	_bg_island.position = Vector3(2.2, -0.35, -0.6)
 	vp.add_child(_bg_island)
 
+	var pal := LowPolyMeshLibrary.get_world_palette(1)
 	var isl_mesh := MeshInstance3D.new()
 	isl_mesh.mesh = LowPolyMeshLibrary.create_floating_island_mesh(
-		Vector3(6.4, 2.2, 6.4), Color(0.72, 0.65, 0.86), Color(0.26, 0.20, 0.42), 7
+		Vector3(6.8, 2.4, 6.8), pal["top"], pal["side"], 7, pal["grass"]
 	)
 	_bg_island.add_child(isl_mesh)
 
-	var tree := LowPolyMeshLibrary.create_low_poly_tree(Color(0.68, 0.44, 0.76), 1.0)
-	tree.position = Vector3(-1.8, 0.0, -1.8)
-	_bg_island.add_child(tree)
+	var tree_a := LowPolyMeshLibrary.create_low_poly_tree(pal["accent"], 1.0, false)
+	tree_a.position = Vector3(-2.0, 0.0, -1.9)
+	_bg_island.add_child(tree_a)
 
-	var bench := LowPolyMeshLibrary.create_bench()
-	bench.position = Vector3(-1.5, 0.0, 0.2)
-	bench.rotation_degrees.y = 20.0
-	_bg_island.add_child(bench)
+	var tree_b := LowPolyMeshLibrary.create_low_poly_tree(pal["accent_alt"], 0.85, true)
+	tree_b.position = Vector3(2.2, 0.0, -1.8)
+	_bg_island.add_child(tree_b)
 
-	var lantern := LowPolyMeshLibrary.create_lantern_prop(Color(1.0, 0.78, 0.32), true)
-	lantern.position = Vector3(1.8, 0.0, 1.9)
-	_bg_island.add_child(lantern)
+	var cabin := LowPolyMeshLibrary.create_wooden_cabin(0.75)
+	cabin.position = Vector3(-1.9, 0.0, 0.9)
+	cabin.rotation_degrees.y = 32.0
+	_bg_island.add_child(cabin)
 
-	var g1 := LowPolyMeshLibrary.create_grass_tuft()
-	g1.position = Vector3(-2.3, 0.0, 2.1)
-	_bg_island.add_child(g1)
+	var wf := LowPolyMeshLibrary.create_luminous_waterfall(3.6, 0.72)
+	wf.position = Vector3(1.1, -0.15, 3.4)
+	_bg_island.add_child(wf)
 
-	var rock := LowPolyMeshLibrary.create_rock(Color(0.34, 0.30, 0.52), 1.1)
-	rock.position = Vector3(2.2, 0.0, -1.4)
-	_bg_island.add_child(rock)
+	var crystal := LowPolyMeshLibrary.create_crystal_cluster(Color(0.24, 0.78, 0.94))
+	crystal.position = Vector3(2.1, 0.0, 1.8)
+	_bg_island.add_child(crystal)
 
 	var door := GoldenDoor.new()
-	door.position = Vector3(0.7, 0.0, -1.0)
-	door.rotation_degrees.y = -32.0
+	door.position = Vector3(0.65, 0.0, -1.1)
+	door.rotation_degrees.y = -28.0
 	door.required_keys = 0
 	door.required_switches = 0
 	_bg_island.add_child(door)
 
+	_rebuild_backdrop_hero(SaveManager.get_equipped_skin())
+
 	_bg_cam = Camera3D.new()
 	_bg_cam.fov = 34.0
-	_bg_cam.position = Vector3(6.8, 7.6, 9.2)
+	_bg_cam.position = Vector3(6.8, 7.4, 9.2)
 	vp.add_child(_bg_cam)
-	_bg_cam.look_at(Vector3(-0.9, 0.7, 0.0), Vector3.UP)
+	_bg_cam.look_at(Vector3(-0.9, 0.75, 0.0), Vector3.UP)
+
+
+func _rebuild_backdrop_hero(skin_id: String) -> void:
+	if _bg_island == null:
+		return
+	if _bg_hero != null and is_instance_valid(_bg_hero):
+		_bg_hero.queue_free()
+	_bg_hero = LowPolyMeshLibrary.build_hooded_character(false, skin_id)
+	_bg_hero.position = Vector3(-0.25, 0.0, 1.35)
+	_bg_hero.rotation_degrees.y = -155.0
+	_bg_island.add_child(_bg_hero)
 
 
 func _spawn_3d_starfield(parent: Node, count: int) -> void:
@@ -206,10 +214,10 @@ func _spawn_3d_starfield(parent: Node, count: int) -> void:
 	rng.seed = 42
 	var star_mat := StandardMaterial3D.new()
 	star_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	star_mat.albedo_color = Color(0.92, 0.96, 1.0)
+	star_mat.albedo_color = Color(0.88, 0.94, 1.0)
 	var sph := SphereMesh.new()
-	sph.radius = 0.14
-	sph.height = 0.28
+	sph.radius = 0.13
+	sph.height = 0.26
 	sph.radial_segments = 5
 	sph.rings = 3
 	for i in range(count):
@@ -220,17 +228,15 @@ func _spawn_3d_starfield(parent: Node, count: int) -> void:
 		var theta := rng.randf_range(0.0, TAU)
 		var phi := rng.randf_range(-0.25, 0.95)
 		m.position = Vector3(cos(theta) * cos(phi) * dist, sin(phi) * dist + 2.0, sin(theta) * cos(phi) * dist)
-		var sc := rng.randf_range(0.45, 1.35)
+		var sc := rng.randf_range(0.45, 1.30)
 		m.scale = Vector3(sc, sc, sc)
 		parent.add_child(m)
 
 
 func _build_ui() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	# Keep main menu split LTR so buttons stay strictly on the LEFT and 3D island stays unobstructed on the RIGHT!
 	layout_direction = Control.LAYOUT_DIRECTION_LTR
 
-	# Top bar: Title + Crystal Counter pill (top-right)
 	var top_bar := MarginContainer.new()
 	top_bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	top_bar.add_theme_constant_override("margin_left", 42)
@@ -240,6 +246,7 @@ func _build_ui() -> void:
 	add_child(top_bar)
 
 	var top_row := HBoxContainer.new()
+	top_row.add_theme_constant_override("separation", 10)
 	top_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top_bar.add_child(top_row)
 
@@ -264,10 +271,9 @@ func _build_ui() -> void:
 	crystal_pill.pressed.connect(_show_memories_modal)
 	top_row.add_child(crystal_pill)
 
-	# Left Frosted-Glass Pill Menu Column (strictly on the LEFT, never covering the 3D island!)
 	var menu_scroll := ScrollContainer.new()
 	menu_scroll.anchor_left = 0.04
-	menu_scroll.anchor_right = 0.34
+	menu_scroll.anchor_right = 0.35
 	menu_scroll.anchor_top = 0.14
 	menu_scroll.anchor_bottom = 0.94
 	menu_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -275,7 +281,7 @@ func _build_ui() -> void:
 
 	var btn_vbox := VBoxContainer.new()
 	btn_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	btn_vbox.add_theme_constant_override("separation", 9)
+	btn_vbox.add_theme_constant_override("separation", 8)
 	menu_scroll.add_child(btn_vbox)
 
 	_continue_btn = _make_pill_btn("menu_continue", "res://assets/icons/icon_play.svg", true)
@@ -292,13 +298,17 @@ func _build_ui() -> void:
 	)
 	btn_vbox.add_child(new_btn)
 
-	var how_btn := _make_pill_btn("menu_how_to_play", "res://assets/icons/icon_help.svg", false)
-	how_btn.pressed.connect(_show_how_to_play_modal)
-	btn_vbox.add_child(how_btn)
+	var wardrobe_btn := _make_pill_btn("menu_wardrobe", "res://assets/icons/icon_wardrobe.svg", false)
+	wardrobe_btn.pressed.connect(_show_wardrobe_modal)
+	btn_vbox.add_child(wardrobe_btn)
 
 	var stages_btn := _make_pill_btn("menu_stage_select", "res://assets/icons/icon_star.svg", false)
 	stages_btn.pressed.connect(_show_stage_select_modal)
 	btn_vbox.add_child(stages_btn)
+
+	var how_btn := _make_pill_btn("menu_how_to_play", "res://assets/icons/icon_help.svg", false)
+	how_btn.pressed.connect(_show_how_to_play_modal)
+	btn_vbox.add_child(how_btn)
 
 	var settings_btn := _make_pill_btn("menu_settings", "res://assets/icons/icon_gear.svg", false)
 	settings_btn.pressed.connect(_show_settings_modal)
@@ -326,17 +336,17 @@ func _build_ui() -> void:
 func _make_pill_btn(loc_key: String, icon_path: String, is_primary: bool) -> Button:
 	var btn := Button.new()
 	btn.set_meta("loc_key", loc_key)
-	btn.custom_minimum_size = Vector2(0, 54 if is_primary else 48)
+	btn.custom_minimum_size = Vector2(0, 52 if is_primary else 46)
 	if is_primary:
-		var warm_bg := Color(0.56, 0.25, 0.18, 0.88)
-		var warm_hover := Color(0.70, 0.36, 0.22, 0.95)
+		var warm_bg := Color(0.56, 0.28, 0.14, 0.90)
+		var warm_hover := Color(0.70, 0.38, 0.18, 0.96)
 		btn.add_theme_stylebox_override("normal", UIStyleHelper.make_panel_style(warm_bg, UIStyleHelper.ACCENT_GOLD, 24, 2))
 		btn.add_theme_stylebox_override("hover", UIStyleHelper.make_panel_style(warm_hover, Color(1.0, 0.92, 0.65), 24, 2))
 		btn.add_theme_stylebox_override("pressed", UIStyleHelper.make_panel_style(warm_hover, UIStyleHelper.ACCENT_GOLD, 24, 2))
 		btn.add_theme_color_override("font_color", UIStyleHelper.TEXT_PRIMARY)
-		btn.add_theme_font_size_override("font_size", 20)
+		btn.add_theme_font_size_override("font_size", 19)
 	else:
-		UIStyleHelper.style_button(btn, Color(0.78, 0.80, 0.96, 0.36), 22, 17)
+		UIStyleHelper.style_button(btn, Color(0.72, 0.78, 0.96, 0.34), 22, 16)
 	UIStyleHelper.apply_icon(btn, icon_path, 22)
 	btn.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	return btn
@@ -345,7 +355,7 @@ func _make_pill_btn(loc_key: String, icon_path: String, is_primary: bool) -> But
 func _build_modal() -> void:
 	_modal_container = ColorRect.new()
 	_modal_container.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_modal_container.color = Color(0.03, 0.04, 0.10, 0.82)
+	_modal_container.color = Color(0.03, 0.04, 0.10, 0.84)
 	_modal_container.visible = false
 	add_child(_modal_container)
 
@@ -388,6 +398,72 @@ func _clear_modal_body() -> void:
 	LocalizationManager.apply_layout_direction(_modal_container)
 	for c in _modal_body.get_children():
 		c.queue_free()
+
+
+func _show_wardrobe_modal() -> void:
+	## Character Cloak & Lantern Wardrobe unlocked with Memory Crystals (no real money).
+	AudioManager.play_sfx("ui_click")
+	_clear_modal_body()
+	var owned := SaveManager.get_collected_secret_count()
+	_modal_title.text = "%s (%d ◆)" % [LocalizationManager.t("menu_wardrobe"), owned]
+	_modal_container.visible = true
+
+	var equipped := SaveManager.get_equipped_skin()
+	for s in GameState.CHARACTER_SKINS:
+		var sid := str(s["id"])
+		var cost := int(s["cost"])
+		var unlocked := SaveManager.is_skin_unlocked(sid) or owned >= cost
+		var is_eq := (sid == equipped)
+
+		var card := PanelContainer.new()
+		card.add_theme_stylebox_override("panel", UIStyleHelper.make_panel_style(Color(0.10, 0.12, 0.24, 0.92), UIStyleHelper.ACCENT_GOLD if is_eq else UIStyleHelper.ACCENT_CYAN, 16, 2 if is_eq else 1))
+		_modal_body.add_child(card)
+
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 12)
+		card.add_child(row)
+
+		var swatch := ColorRect.new()
+		swatch.custom_minimum_size = Vector2(44, 44)
+		swatch.color = s["lantern"] as Color
+		row.add_child(swatch)
+
+		var info := VBoxContainer.new()
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(info)
+
+		var nm := Label.new()
+		nm.text = LocalizationManager.t(str(s["name_key"]))
+		nm.add_theme_font_size_override("font_size", 18)
+		nm.add_theme_color_override("font_color", UIStyleHelper.ACCENT_GOLD if is_eq else UIStyleHelper.TEXT_PRIMARY)
+		info.add_child(nm)
+
+		var desc := Label.new()
+		desc.text = LocalizationManager.t(str(s["desc_key"]))
+		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		desc.add_theme_font_size_override("font_size", 14)
+		desc.add_theme_color_override("font_color", UIStyleHelper.TEXT_MUTED)
+		info.add_child(desc)
+
+		var act_btn := Button.new()
+		act_btn.custom_minimum_size = Vector2(140, 44)
+		if is_eq:
+			act_btn.text = LocalizationManager.t("wardrobe_equipped")
+			act_btn.disabled = true
+			UIStyleHelper.style_button(act_btn, UIStyleHelper.ACCENT_GOLD, 16, 15)
+		elif unlocked:
+			act_btn.text = LocalizationManager.t("wardrobe_equip")
+			UIStyleHelper.style_button(act_btn, UIStyleHelper.ACCENT_CYAN, 16, 15)
+			act_btn.pressed.connect(func() -> void:
+				AudioManager.play_sfx("key_pickup")
+				GameState.try_unlock_or_equip_skin(sid)
+				_show_wardrobe_modal()
+			)
+		else:
+			act_btn.text = "%d ◆" % cost
+			act_btn.disabled = true
+			UIStyleHelper.style_button(act_btn, UIStyleHelper.BORDER_SUBTLE, 16, 15)
+		row.add_child(act_btn)
 
 
 func _add_studio_card(parent: VBoxContainer) -> void:
@@ -472,8 +548,7 @@ func _show_stage_select_modal() -> void:
 		_modal_body.add_child(grid)
 
 		var w_start := (w - 1) * 20 + 1
-		var w_count := 20
-		for offset in range(w_count):
+		for offset in range(20):
 			var sid := w_start + offset
 			var unlocked := SaveManager.is_stage_unlocked(sid)
 			var done := SaveManager.is_stage_completed(sid)
@@ -537,6 +612,30 @@ func _show_settings_modal() -> void:
 	s_slider.value_changed.connect(func(v: float) -> void: SaveManager.set_setting("sfx_volume", v))
 	_modal_body.add_child(s_slider)
 
+	var diff_btn := Button.new()
+	diff_btn.text = LocalizationManager.t("settings_difficulty") + ": " + LocalizationManager.t("diff_" + SaveManager.get_difficulty())
+	diff_btn.custom_minimum_size = Vector2(0, 48)
+	UIStyleHelper.style_button(diff_btn, UIStyleHelper.ACCENT_GOLD, 16, 17)
+	diff_btn.pressed.connect(func() -> void:
+		var cur := SaveManager.get_difficulty()
+		var nxt := "master" if cur == "normal" else ("story" if cur == "master" else "normal")
+		SaveManager.set_difficulty(nxt)
+		diff_btn.text = LocalizationManager.t("settings_difficulty") + ": " + LocalizationManager.t("diff_" + nxt)
+	)
+	_modal_body.add_child(diff_btn)
+
+	var guides_btn := Button.new()
+	var g_on := bool(SaveManager.get_setting("puzzle_guides", true))
+	guides_btn.text = LocalizationManager.t("settings_puzzle_guides") + ": " + LocalizationManager.t("state_on" if g_on else "state_off")
+	guides_btn.custom_minimum_size = Vector2(0, 48)
+	UIStyleHelper.style_button(guides_btn, UIStyleHelper.ACCENT_CYAN, 16, 17)
+	guides_btn.pressed.connect(func() -> void:
+		var cur := bool(SaveManager.get_setting("puzzle_guides", true))
+		SaveManager.set_setting("puzzle_guides", not cur)
+		guides_btn.text = LocalizationManager.t("settings_puzzle_guides") + ": " + LocalizationManager.t("state_on" if (not cur) else "state_off")
+	)
+	_modal_body.add_child(guides_btn)
+
 	var gfx_btn := Button.new()
 	gfx_btn.text = LocalizationManager.t("settings_graphics") + ": " + UIStyleHelper.quality_label_ar(str(SaveManager.get_setting("graphics_quality", "medium")))
 	gfx_btn.custom_minimum_size = Vector2(0, 48)
@@ -548,6 +647,17 @@ func _show_settings_modal() -> void:
 		gfx_btn.text = LocalizationManager.t("settings_graphics") + ": " + UIStyleHelper.quality_label_ar(nxt)
 	)
 	_modal_body.add_child(gfx_btn)
+
+	var replay_cine_btn := Button.new()
+	replay_cine_btn.text = LocalizationManager.t("settings_replay_intro")
+	replay_cine_btn.custom_minimum_size = Vector2(0, 46)
+	UIStyleHelper.style_button(replay_cine_btn, UIStyleHelper.ACCENT_CYAN, 16, 16)
+	replay_cine_btn.pressed.connect(func() -> void:
+		SaveManager.data["intro_cinematic_seen"] = false
+		SaveManager.save_game()
+		GameState.start_stage(1)
+	)
+	_modal_body.add_child(replay_cine_btn)
 
 	_add_studio_card(_modal_body)
 
@@ -611,7 +721,6 @@ func _apply_loc(node: Node) -> void:
 
 
 func _play_interactive_studio_splash() -> void:
-	## Animated vector-drawn majnon.studio logo intro — waits for player tap to enter (NO premature auto-skip!)
 	var splash := Button.new()
 	splash.flat = true
 	splash.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -666,7 +775,6 @@ func _play_interactive_studio_splash() -> void:
 	tap_lbl.modulate.a = 0.0
 	box.add_child(tap_lbl)
 
-	# 1) Draw spiral stroke smoothly, 2) pop blue center orb, 3) reveal studio name, 4) pulse tap prompt
 	var anim := create_tween()
 	anim.tween_property(logo, "draw_progress", 1.0, 1.05).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
 	anim.tween_property(logo, "dot_scale", 1.0, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -675,7 +783,6 @@ func _play_interactive_studio_splash() -> void:
 	anim.tween_property(handle_lbl, "modulate:a", 1.0, 0.35)
 	anim.tween_property(tap_lbl, "modulate:a", 1.0, 0.40)
 
-	# Continuous breathing glow & tap prompt pulse until user taps
 	var pulse := create_tween().set_loops()
 	pulse.tween_property(tap_lbl, "modulate:a", 0.35, 0.85)
 	pulse.tween_property(tap_lbl, "modulate:a", 1.0, 0.85)

@@ -1,8 +1,9 @@
 class_name PlayerController
 extends CharacterBody3D
 
-## Responsive hooded protagonist controller with smooth analog isometric movement,
-## coyote time, jump buffering, subtle movement lean, multi-zone gravity support, and Echo integration.
+## Responsive hooded protagonist controller preserving the approved character silhouette,
+## supporting crystal-unlocked cloak skins, difficulty-tuned coyote time & jump buffer,
+## smooth isometric movement, multi-zone gravity blending, and contextual interaction targeting.
 
 signal interaction_target_changed(target: Node)
 signal interacted(target: Node)
@@ -16,7 +17,6 @@ signal fell_into_void
 @export var base_gravity: float = 18.5
 @export var void_y_threshold: float = -10.0
 
-const COYOTE_TIME := 0.14
 const JUMP_BUFFER_TIME := 0.14
 
 var gravity_scale: float = 1.0
@@ -34,16 +34,15 @@ var _bob_time: float = 0.0
 var _camera_ref: Camera3D = null
 var _coyote_timer: float = 0.0
 var _jump_buffer_timer: float = 0.0
-var _active_gravity_zones: Dictionary = {} # zone_id -> {"scale": float, "lift": float}
+var _active_gravity_zones: Dictionary = {}
+var _was_on_floor: bool = true
 
 
 func _ready() -> void:
 	collision_layer = 2
 	collision_mask = 1 | 16
 
-	_rig = LowPolyMeshLibrary.build_hooded_character(false)
-	add_child(_rig)
-	_lantern_holder = _rig.get_node_or_null("LanternHolder")
+	_rebuild_character_rig(SaveManager.get_equipped_skin())
 
 	_interact_area = get_node_or_null("InteractArea") as Area3D
 	if _interact_area != null:
@@ -54,6 +53,15 @@ func _ready() -> void:
 
 	GameState.touch_jump_pressed.connect(_queue_jump)
 	GameState.touch_interact_pressed.connect(_try_interact)
+	GameState.skin_changed.connect(_rebuild_character_rig)
+
+
+func _rebuild_character_rig(skin_id: String) -> void:
+	if _rig != null and is_instance_valid(_rig):
+		_rig.queue_free()
+	_rig = LowPolyMeshLibrary.build_hooded_character(false, skin_id)
+	add_child(_rig)
+	_lantern_holder = _rig.get_node_or_null("LanternHolder")
 
 
 func set_camera_reference(cam: Camera3D) -> void:
@@ -106,9 +114,13 @@ func _physics_process(delta: float) -> void:
 		move_and_slide()
 		return
 
-	# Coyote time & jump buffer timers for crisp, forgiving platforming
-	if is_on_floor():
-		_coyote_timer = COYOTE_TIME
+	var on_floor_now := is_on_floor()
+	if on_floor_now and not _was_on_floor and velocity.y <= -2.5:
+		AudioManager.play_sfx("ui_click")
+	_was_on_floor = on_floor_now
+
+	if on_floor_now:
+		_coyote_timer = GameState.get_coyote_time()
 	else:
 		_coyote_timer = maxf(0.0, _coyote_timer - delta)
 
@@ -117,25 +129,22 @@ func _physics_process(delta: float) -> void:
 	if _jump_buffer_timer > 0.0:
 		_jump_buffer_timer = maxf(0.0, _jump_buffer_timer - delta)
 
-	# Gravity / Blue Door upward lift
 	if upward_lift > 0.0:
 		velocity.y = move_toward(velocity.y, upward_lift, base_gravity * 0.75 * delta)
-	elif not is_on_floor():
+	elif not on_floor_now:
 		velocity.y -= base_gravity * gravity_scale * delta
 	elif velocity.y < 0.0:
 		velocity.y = -0.1
 
-	# Execute buffered jump if grounded or within coyote window
 	if _jump_buffer_timer > 0.0 and _coyote_timer > 0.0:
 		var mult := 1.45 if gravity_scale < 0.7 else 1.0
 		velocity.y = jump_velocity * mult
 		_coyote_timer = 0.0
 		_jump_buffer_timer = 0.0
 
-	# Combined keyboard + floating touchpad analog input
 	var input_vec := _get_move_input()
 	var move_dir := _to_isometric_direction(input_vec)
-	var accel := acceleration if is_on_floor() else air_acceleration
+	var accel := acceleration if on_floor_now else air_acceleration
 
 	if move_dir.length_squared() > 0.004:
 		var desired := move_dir * (move_speed * GameState.get_move_speed_multiplier())
@@ -219,7 +228,6 @@ func _animate_character(delta: float) -> void:
 	var speed_ratio := clampf(horiz_speed / move_speed, 0.0, 1.0)
 	var bob_amp := lerpf(0.015, 0.055, speed_ratio)
 	_rig.position.y = absf(sin(_bob_time)) * bob_amp
-	# Gentle forward lean when moving for lively, responsive feel
 	_rig.rotation.x = lerpf(_rig.rotation.x, -0.11 * speed_ratio, minf(1.0, 10.0 * delta))
 	if _lantern_holder != null:
 		_lantern_holder.rotation.z = sin(_bob_time * 0.75) * (0.08 + 0.08 * speed_ratio)
@@ -278,3 +286,5 @@ func _exit_tree() -> void:
 		GameState.touch_jump_pressed.disconnect(_queue_jump)
 	if GameState.touch_interact_pressed.is_connected(_try_interact):
 		GameState.touch_interact_pressed.disconnect(_try_interact)
+	if GameState.skin_changed.is_connected(_rebuild_character_rig):
+		GameState.skin_changed.disconnect(_rebuild_character_rig)

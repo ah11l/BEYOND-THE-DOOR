@@ -1,25 +1,24 @@
-# BEYOND THE DOOR (ما وراء الباب) — Build & Test Report (V10)
+# BEYOND THE DOOR (ما وراء الباب) — Build & Test Report (V16)
 
 **Engine:** Godot 4.5.2 (`GL Compatibility`)  
-**Workflow:** `.github/workflows/main.yml` (`barichello/godot-ci:4.5.2`) — Verified Green for both Debug APK & Signed Google Play Release AAB  
-**Content Scope:** 120 Stages (6 Worlds × 20), 120 Memory Crystals, Secret Ending at 60 Crystals in Stage 120.
+**Workflow:** `.github/workflows/main.yml` (`barichello/godot-ci:4.5.2`) — Verified Green for Debug APK & Signed Google Play AAB  
+**Localization:** 812 synced English + Arabic keys (`translations_data.gd`, AR & EN only)
 
-## 1. Automated Static QA & Asset Integrity Audit (`tools/qa_stage_audit.py`)
+## 1. Automated Static QA & Integrity Checks (`tools/qa_stage_audit.py`)
 - **Stages Parsed:** 120 / 120 (`world_1_data.gd` – `world_6_data.gd`)
-- **State-Bound Collectibles Verified:** 42 keys + 42 memory crystals (gated by `set_state_active()`)
+- **State-Bound Collectibles Gated:** 42 keys + 42 memory crystals
 - **Broken `plate_id` / `zone_id` References:** 0
-- **Unreachable Golden Exit Doors (BFS graph check):** 0
-- **Asset Format Integrity (PNG / TTF / SVG / WAV magic-byte check):** 100% Pass (`assets/icons/majnon_studio_logo.png` converted to genuine PNG; 0 format mismatches).
+- **Unreachable Golden Exit Doors (BFS physics/bridge/gravity/portal graph):** 0
+- **Asset Header Integrity (PNG / TTF / WAV):** 0 mismatches (`majnon_studio_logo.png` verified genuine PNG + 5 new contextual SVG icons).
 
-## 2. V10 + V9 Fixes Applied
-1. **Studio Logo Format Fix (`assets/icons/majnon_studio_logo.png`):** Re-encoded from misnamed JPEG bytes to genuine PNG so Godot imports it cleanly without `ERR_FILE_CORRUPT`.
-2. **Hidden State Collectibles (`key_pickup.gd`, `memory_secret.gd`, `stage_builder.gd`):** `set_state_active(active: bool)` disables `visible`, `Area3D.monitoring`, `Area3D.monitorable`, collision layer/mask, and `CollisionShape3D.disabled`.
-3. **Echo World/State Sync (`echo_ghost.gd`, `echo_recorder.gd`):** `EchoGhost` enforces live `world_side` and `room_state` matching.
-4. **Overlapping Gravity Zones (`gravity_zone.gd`, `player.gd`):** `PlayerController` manages overlapping zones by `zone_id`.
-5. **Stage Skip Cap & Cleanup (`stage_builder.gd`):** `skip_stage` uses `stage_id < GameState.TOTAL_STAGES` (120); duplicate branches removed.
-6. **Production CI Pipeline (`.github/workflows/main.yml`):** Uses pure POSIX `awk` (no `python3` dependency), writes `android/.build_version = 4.5.2.stable`, injects AdMob `APPLICATION_ID`, and exports signed Google Play AAB.
+## 2. V16 Major Overhaul Summary (Cumulative with V9 & V10)
+1. **Visual Redesign:** Restrained cosmic palettes, mossy-rimmed faceted floating islands, layered/pine trees with camera occlusion fade, wooden cabins, luminous waterfalls, and reduced bloom.
+2. **Dynamic Camera (`iso_camera.gd`):** Stage overview glide, velocity lookahead, elevation zoom, and layer-32 prop occlusion fade while preserving consistent joystick controls.
+3. **Contextual Circular UI & Parchment Notes (`game_hud.gd`):** Floating circular icon button (Hand / Book / Door / Search) + aged Parchment Scroll panel for Clue Stones.
+4. **Redesigned Puzzle Guides (`stage_builder.gd`):** Replaced straight floating cyan beams with subtle ground-embedded rune markers, toggleable in Settings.
+5. **Merged Story, 3D Opening Cinematic & 6 Bosses:** Skippable 3D Stage 1 opening sequence, updated 6 world story arcs, and `GuardianBoss` encounters on Stages 20, 40, 60, 80, 100, and 120.
+6. **Difficulty Modes & Character Wardrobe:** Story / Normal / Master difficulty tuning + 5 crystal-unlocked hooded cloak/lantern skins in Main Menu.
 
-## 3. Build & Runtime Status (Honest Separation)
-- **GitHub Actions CI:** Verified green exporting both `beyond-the-door-debug-apk` and signed `beyond-the-door-google-play-aab`.
-- **Static Audit:** `tools/qa_stage_audit.py` passes with exit code 0 (does not substitute for full live gameplay playtesting across all 120 stages).
-- **Pending Live Device QA:** Playtest V9/V10 fixes on Debug APK, and verify live AdMob ads via Google Play Console Internal Testing with the signed AAB.
+## 3. Honest Verification Separation
+- **Passed (Static Environment):** `tools/qa_stage_audit.py` (120/120 stages, 0 broken refs, 0 asset header errors), GDScript class/signal wiring audit, and 812-key AR/EN parity check.
+- **Requires Live Android Device Testing (after GitHub Actions builds V16 APK):** Dynamic camera framing on corners/elevations, circular interact button positioning on phone screens, 3D opening cinematic pacing, boss encounters on Stage 20+, and live AdMob ads via Google Play Internal Testing AAB.

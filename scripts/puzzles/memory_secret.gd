@@ -100,3 +100,6 @@ func _collect() -> void:
 	SaveManager.collect_secret(secret_id)
 	AudioManager.play_sfx("secret_found")
 	secret_collected.emit(secret_id, lore_key)
+
+func get_interact_icon_type() -> String:
+	return "search"

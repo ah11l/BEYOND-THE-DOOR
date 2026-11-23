@@ -2,8 +2,9 @@ class_name StageBuilder
 extends Node3D
 
 ## Runtime 3D stage builder & gameplay controller for all 120 stages across 6 worlds.
-## Instantiates floating low-poly islands, bridges, props, doors, Echo recorder,
-## puzzle devices, checkpoints, memory secrets, and Stage 120 ending pedestals.
+## Features reference-aligned restrained cosmic environments, intelligent dynamic camera,
+## subtle ground-embedded puzzle guides, Guardian/Echo Boss encounters on stages 20/40/60/80/100/120,
+## 3D Opening Cinematic on Stage 1, and contextual circular interaction UI.
 
 const PLAYER_SCENE := preload("res://scenes/player/player.tscn")
 const HUD_SCENE := preload("res://scenes/ui/game_hud.tscn")
@@ -17,19 +18,24 @@ var _player: PlayerController
 var _camera_rig: IsoCameraRig
 var _echo_recorder: EchoRecorder
 var _hud: GameHUD
+var _boss: GuardianBoss = null
 
 var _golden_door: GoldenDoor = null
 var _purple_doors: Array[PurpleDoor] = []
-var _gravity_zones: Dictionary = {}        # zone_id -> GravityZone
-var _state_nodes: Array[Dictionary] = []   # {"node": Node3D, "body": CollisionObject3D, "state": int}
-var _plate_bridges: Dictionary = {}        # plate_id -> Array[Dictionary{"node": Node3D, "body": StaticBody3D}]
-var _plates: Dictionary = {}               # plate_id -> PressurePlate
+var _gravity_zones: Dictionary = {}
+var _state_nodes: Array[Dictionary] = []
+var _plate_bridges: Dictionary = {}
+var _plates: Dictionary = {}
 var _pushable_blocks: Array[PushableBlock] = []
+var _conduit_root: Node3D = null
 
 var _keys_collected: int = 0
 var _active_room_state: int = 0
 var _respawn_pos: Vector3 = Vector3(0.0, 0.25, 0.0)
 var _respawn_world_side: int = 0
+var _stage_center: Vector3 = Vector3.ZERO
+var _stage_span: float = 14.0
+var _cinematic_active: bool = false
 
 
 func _ready() -> void:
@@ -49,33 +55,48 @@ func _ready() -> void:
 	_setup_player_and_camera()
 	_setup_hud_and_echo()
 	_build_energy_conduits()
+	_spawn_boss_if_finale()
 	_apply_room_state(0)
 	_evaluate_door_conditions()
 
-	# Show World Chapter Story Card on the first stage of each world, else intro hint toast
-	var intro_hint := str(stage_def.get("hint_key", ""))
+	SaveManager.settings_changed.connect(_on_settings_changed)
+
+	# First-time 3D Opening Cinematic on Stage 1, else World Chapter Story Card or stage intro
 	var world_starts := {1: "world_1_story", 21: "world_2_story", 41: "world_3_story", 61: "world_4_story", 81: "world_5_story", 101: "world_6_story"}
-	if world_starts.has(stage_id):
-		_hud.show_story_chapter(int(stage_def.get("world", 1)), str(world_starts[stage_id]))
-	elif not intro_hint.is_empty():
-		_hud.show_toast(intro_hint, 5.5)
+	if stage_id == 1 and not SaveManager.is_intro_seen():
+		_play_opening_cinematic()
+	else:
+		_camera_rig.configure_stage_framing(_stage_center, _stage_span, true)
+		if world_starts.has(stage_id):
+			_hud.show_story_chapter(int(stage_def.get("world", 1)), str(world_starts[stage_id]))
+		elif _boss != null:
+			_hud.show_toast("boss_w%d_intro" % int(stage_def.get("world", 1)), 5.5)
+		else:
+			var intro_hint := str(stage_def.get("hint_key", ""))
+			if not intro_hint.is_empty():
+				_hud.show_toast(intro_hint, 4.8)
+
+
+func _on_settings_changed() -> void:
+	if _conduit_root != null and is_instance_valid(_conduit_root):
+		_conduit_root.visible = bool(SaveManager.get_setting("puzzle_guides", true))
 
 
 func _setup_environment() -> void:
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = (world_palette["sky_top"] as Color).lerp(Color(0.03, 0.04, 0.12), 0.55)
+	env.background_color = (world_palette["sky_top"] as Color).lerp(Color(0.025, 0.035, 0.095), 0.45)
 
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = (world_palette["light"] as Color).darkened(0.45)
-	env.ambient_light_energy = 0.88
-	env.fog_enabled = false
+	env.ambient_light_color = (world_palette["light"] as Color).darkened(0.50)
+	env.ambient_light_energy = 0.82
+	env.fog_enabled = true
 	env.fog_light_color = world_palette["fog"] as Color
-	env.fog_density = 0.003
-	env.fog_sky_affect = 0.0
+	env.fog_density = 0.0045
+	env.fog_sky_affect = 0.25
 	env.glow_enabled = true
-	env.glow_intensity = 0.45
-	env.glow_bloom = 0.18
+	env.glow_intensity = 0.34
+	env.glow_bloom = 0.12
 
 	var we := WorldEnvironment.new()
 	we.environment = env
@@ -83,45 +104,55 @@ func _setup_environment() -> void:
 
 	var moon := DirectionalLight3D.new()
 	moon.light_color = world_palette["light"] as Color
-	moon.light_energy = 1.25
+	moon.light_energy = 1.18
 	moon.rotation_degrees = Vector3(-42.0, 38.0, 0.0)
 	moon.shadow_enabled = (str(SaveManager.get_setting("graphics_quality", "medium")) != "low")
 	moon.shadow_blur = 2.2
-	moon.directional_shadow_max_distance = 48.0
+	moon.directional_shadow_max_distance = 52.0
 	add_child(moon)
 
 	var rose_fill := DirectionalLight3D.new()
-	rose_fill.light_color = Color(0.95, 0.48, 0.62)
-	rose_fill.light_energy = 0.42
+	rose_fill.light_color = Color(0.76, 0.42, 0.58)
+	rose_fill.light_energy = 0.32
 	rose_fill.rotation_degrees = Vector3(-22.0, -135.0, 0.0)
 	rose_fill.shadow_enabled = false
 	add_child(rose_fill)
 
 	var blue_rim := DirectionalLight3D.new()
-	blue_rim.light_color = Color(0.32, 0.76, 1.0)
-	blue_rim.light_energy = 0.48
+	blue_rim.light_color = Color(0.28, 0.66, 0.88)
+	blue_rim.light_energy = 0.38
 	blue_rim.rotation_degrees = Vector3(-30.0, 125.0, 0.0)
 	blue_rim.shadow_enabled = false
 	add_child(blue_rim)
-	_spawn_3d_starfield(110)
+	_spawn_3d_starfield(120)
 
 
 func _build_stage_geometry() -> void:
 	var top_col: Color = world_palette["top"]
+	var grass_col: Color = world_palette.get("grass", Color(0.20, 0.38, 0.34))
 	var side_col: Color = world_palette["side"]
 	var accent_col: Color = world_palette["accent"]
+	var accent_alt: Color = world_palette.get("accent_alt", accent_col.darkened(0.2))
 
-	# 1. Floating Islands
+	var min_pt := Vector3(INF, INF, INF)
+	var max_pt := Vector3(-INF, -INF, -INF)
+
+	# 1. Floating Islands (with tight collision matching playable top surface & rich decorative rims)
 	var islands: Array = stage_def.get("islands", [])
 	for idx in range(islands.size()):
 		var isl: Dictionary = islands[idx]
 		var pos: Vector3 = _to_vec3(isl["pos"])
 		var sz: Vector3 = _to_vec3(isl["size"])
-		var state_req: int = int(isl.get("state", -1)) # -1 = always, 0 = State A, 1 = State B
+		var state_req: int = int(isl.get("state", -1))
 		var alt_tint: bool = bool(isl.get("alt_world", false))
 		var t_col := top_col.darkened(0.24) if alt_tint else top_col
+		var g_col := grass_col.darkened(0.22) if alt_tint else grass_col
 		if state_req == 1:
-			t_col = top_col.lerp(Color(0.82, 0.42, 0.96), 0.35)
+			t_col = top_col.lerp(Color(0.58, 0.34, 0.72), 0.38)
+			g_col = grass_col.lerp(Color(0.46, 0.28, 0.64), 0.40)
+
+		min_pt = min_pt.min(pos - sz * 0.5)
+		max_pt = max_pt.max(pos + sz * 0.5)
 
 		var body := StaticBody3D.new()
 		body.name = "Island_%d" % idx
@@ -129,28 +160,39 @@ func _build_stage_geometry() -> void:
 		body.position = pos
 
 		var mesh_inst := MeshInstance3D.new()
-		mesh_inst.mesh = LowPolyMeshLibrary.create_floating_island_mesh(sz, t_col, side_col, stage_id * 31 + idx)
+		mesh_inst.mesh = LowPolyMeshLibrary.create_floating_island_mesh(sz, t_col, side_col, stage_id * 31 + idx, g_col)
 		body.add_child(mesh_inst)
 
+		# Accurate playable surface collider (slight 0.08m inset prevents walking on thin air at beveled edge)
 		var col := CollisionShape3D.new()
 		var box := BoxShape3D.new()
-		box.size = Vector3(sz.x, 1.0, sz.z)
+		box.size = Vector3(maxf(sz.x - 0.08, 1.0), 1.0, maxf(sz.z - 0.08, 1.0))
 		col.shape = box
 		col.position = Vector3(0.0, -0.5, 0.0)
 		body.add_child(col)
 		_world_root.add_child(body)
-		if sz.x >= 5.0 and sz.z >= 5.0 and state_req < 0:
-			var g1 := LowPolyMeshLibrary.create_grass_tuft(side_col.lightened(0.22))
-			g1.position = Vector3(-sz.x * 0.38, 0.0, sz.z * 0.34)
+
+		# Rich low-poly grass clusters & subtle waterfall on larger permanent islands
+		if sz.x >= 4.8 and sz.z >= 4.8 and state_req < 0:
+			var g1 := LowPolyMeshLibrary.create_grass_tuft(g_col.lightened(0.14))
+			g1.position = Vector3(-sz.x * 0.40, 0.0, sz.z * 0.36)
 			body.add_child(g1)
-			var g2 := LowPolyMeshLibrary.create_grass_tuft(side_col.lightened(0.18))
-			g2.position = Vector3(sz.x * 0.36, 0.0, -sz.z * 0.36)
+			var g2 := LowPolyMeshLibrary.create_grass_tuft(g_col.lightened(0.10))
+			g2.position = Vector3(sz.x * 0.38, 0.0, -sz.z * 0.38)
 			body.add_child(g2)
+			if idx == 0 and sz.x >= 5.6:
+				var wf := LowPolyMeshLibrary.create_luminous_waterfall(3.6, 0.75)
+				wf.position = Vector3(sz.x * 0.22, -0.15, sz.z * 0.50)
+				body.add_child(wf)
 
 		if state_req >= 0:
 			_state_nodes.append({"node": body, "body": body, "state": state_req})
 
-	# 2. Wooden / Luminous Bridges (static, room-state-bound, or plate-activated)
+	if islands.size() > 0:
+		_stage_center = (min_pt + max_pt) * 0.5
+		_stage_span = maxf(max_pt.x - min_pt.x, max_pt.z - min_pt.z)
+
+	# 2. Wooden / Luminous Bridges
 	var bridges: Array = stage_def.get("bridges", [])
 	for idx in range(bridges.size()):
 		var br: Dictionary = bridges[idx]
@@ -172,32 +214,37 @@ func _build_stage_geometry() -> void:
 			(_plate_bridges[req_plate] as Array).append({"node": br_body, "body": br_body})
 			_set_body_active(br_body, br_body, false)
 
-	# 3. Ambient distant decorative floating islets for atmospheric depth
+	# 3. Ambient distant decorative floating islets for cosmic depth
 	var rng := RandomNumberGenerator.new()
 	rng.seed = stage_id * 101 + 7
-	for i in range(6):
-		var angle := float(i) * (TAU / 6.0) + rng.randf_range(-0.3, 0.3)
-		var dist := rng.randf_range(16.0, 26.0)
+	for i in range(7):
+		var angle := float(i) * (TAU / 7.0) + rng.randf_range(-0.25, 0.25)
+		var dist := rng.randf_range(18.0, 29.0)
 		var deco := MeshInstance3D.new()
-		var d_sz := Vector3(rng.randf_range(1.8, 3.2), rng.randf_range(2.2, 4.0), rng.randf_range(1.8, 3.2))
-		deco.mesh = LowPolyMeshLibrary.create_floating_island_mesh(d_sz, top_col.darkened(0.32), side_col.darkened(0.25), stage_id * 7 + i)
-		deco.position = Vector3(cos(angle) * dist, rng.randf_range(-5.5, 2.5), sin(angle) * dist)
+		var d_sz := Vector3(rng.randf_range(2.0, 3.6), rng.randf_range(2.4, 4.4), rng.randf_range(2.0, 3.6))
+		deco.mesh = LowPolyMeshLibrary.create_floating_island_mesh(d_sz, top_col.darkened(0.32), side_col.darkened(0.28), stage_id * 7 + i, grass_col.darkened(0.30))
+		deco.position = _stage_center + Vector3(cos(angle) * dist, rng.randf_range(-5.5, 2.5), sin(angle) * dist)
 		_world_root.add_child(deco)
 
-	# 4. Props (trees, benches, lanterns, crystals, rocks, arches, spires, monoliths)
+	# 4. Props (alternating plum/indigo/pine trees, wooden cabins, benches, lanterns, crystals, rocks, arches)
+	var prop_idx := 0
 	for prop in stage_def.get("props", []):
 		var kind := str(prop["type"])
 		var p_pos := _to_vec3(prop["pos"])
 		var node: Node3D = null
 		match kind:
 			"tree":
-				node = LowPolyMeshLibrary.create_low_poly_tree(accent_col, float(prop.get("scale", 1.0)))
+				var use_pine := (prop_idx % 3 == 1)
+				var t_col := accent_col if (prop_idx % 2 == 0) else accent_alt
+				node = LowPolyMeshLibrary.create_low_poly_tree(t_col, float(prop.get("scale", 1.0)), use_pine)
+			"cabin":
+				node = LowPolyMeshLibrary.create_wooden_cabin(float(prop.get("scale", 0.85)))
 			"bench":
 				node = LowPolyMeshLibrary.create_bench()
 			"lantern":
 				node = LowPolyMeshLibrary.create_lantern_prop(Color(1.0, 0.78, 0.34), bool(prop.get("light", true)))
 			"crystal":
-				node = LowPolyMeshLibrary.create_crystal_cluster(Color(0.28, 0.86, 1.0))
+				node = LowPolyMeshLibrary.create_crystal_cluster(Color(0.24, 0.78, 0.94))
 			"rock":
 				node = LowPolyMeshLibrary.create_rock(side_col.lightened(0.15), float(prop.get("scale", 1.0)))
 			"arch":
@@ -210,6 +257,7 @@ func _build_stage_geometry() -> void:
 			node.position = p_pos
 			node.rotation_degrees.y = float(prop.get("rot_y", 0.0))
 			_world_root.add_child(node)
+		prop_idx += 1
 
 	# 5. Keys
 	for k in stage_def.get("keys", []):
@@ -273,12 +321,12 @@ func _build_stage_geometry() -> void:
 		if s_state >= 0:
 			_state_nodes.append({"node": ms, "body": null, "state": s_state})
 
-	# 11. Clue Stones
+	# 11. Clue Stones (open Parchment Reading Panel!)
 	for cl in stage_def.get("clues", []):
 		var cs := ClueStone.new()
 		cs.clue_key = str(cl["key"])
 		cs.position = _to_vec3(cl["pos"])
-		cs.clue_read.connect(func(k: String) -> void: _hud.show_toast(k, 6.0))
+		cs.clue_read.connect(func(k: String) -> void: _hud.show_parchment_note(k))
 		_world_root.add_child(cs)
 
 	# 12. Four Door Types
@@ -335,24 +383,36 @@ func _build_stage_geometry() -> void:
 		_world_root.add_child(ped)
 
 
+func _spawn_boss_if_finale() -> void:
+	if stage_id % 20 != 0:
+		return
+	var w_idx := int(stage_def.get("world", 1))
+	_boss = GuardianBoss.new()
+	_boss.world_index = w_idx
+	_boss.is_echo_boss = (w_idx == 5 or w_idx == 6)
+	var anchor := _golden_door.position if _golden_door != null else _stage_center
+	_boss.position = anchor + Vector3(0.0, 4.2, -1.6)
+	_boss.boss_spoke.connect(func(k: String) -> void: _hud.show_toast(k, 5.5))
+	_world_root.add_child(_boss)
+
+
 func _create_bridge_body(p_a: Vector3, p_b: Vector3, width: float, is_magic: bool) -> StaticBody3D:
 	var body := StaticBody3D.new()
 	body.collision_layer = 1
 	var mid := (p_a + p_b) * 0.5
 	var diff := p_b - p_a
 	var length := maxf(diff.length(), 0.5)
-	# Slight +0.035 Y lift eliminates ALL Z-fighting/flicker where bridges meet island tops
 	body.position = mid + Vector3(0.0, 0.035, 0.0)
 	body.rotation.y = atan2(diff.x, diff.z)
 
 	var mat := LowPolyMeshLibrary.make_flat_material(
-		Color(0.32, 0.72, 0.96) if is_magic else Color(0.42, 0.25, 0.20),
-		0.68,
-		Color(0.26, 0.76, 1.0) if is_magic else Color.BLACK,
-		0.70 if is_magic else 0.0
+		Color(0.24, 0.58, 0.78) if is_magic else Color(0.36, 0.22, 0.18),
+		0.72,
+		Color(0.22, 0.68, 0.88) if is_magic else Color.BLACK,
+		0.48 if is_magic else 0.0
 	)
 	var rail_mat := LowPolyMeshLibrary.make_flat_material(
-		Color(0.48, 0.84, 1.0) if is_magic else Color(0.30, 0.17, 0.15), 0.75
+		Color(0.36, 0.72, 0.88) if is_magic else Color(0.24, 0.14, 0.14), 0.78
 	)
 	var usable_len := maxf(length + 0.55, 0.8)
 	var planks := clampi(int(round(usable_len * 2.1)), 3, 16)
@@ -377,7 +437,7 @@ func _create_bridge_body(p_a: Vector3, p_b: Vector3, width: float, is_magic: boo
 
 	var col := CollisionShape3D.new()
 	var cbox := BoxShape3D.new()
-	cbox.size = Vector3(width + 0.2, 0.28, usable_len + 0.3)
+	cbox.size = Vector3(width + 0.16, 0.28, usable_len + 0.28)
 	col.shape = cbox
 	col.position = Vector3(0.0, -0.14, 0.0)
 	body.add_child(col)
@@ -425,8 +485,44 @@ func _setup_hud_and_echo() -> void:
 	_echo_recorder.echo_feedback.connect(func(k: String) -> void: _hud.show_toast(k, 2.8))
 
 
+func _play_opening_cinematic() -> void:
+	## Real in-engine 3D Opening Cinematic on Stage 1 (skippable, bilingual subtitles).
+	_cinematic_active = true
+	if _player != null:
+		_player.movement_locked = true
+	var door_pos := _golden_door.position if _golden_door != null else _stage_center
+	var lines := ["intro_line_1", "intro_line_2", "intro_line_3", "intro_line_4"]
+	var tw := _camera_rig.play_cinematic_shot(
+		door_pos + Vector3(0.0, 2.2, 0.0),
+		_player.global_position,
+		Vector3(16.0, 14.0, 16.0),
+		_camera_rig.base_offset,
+		11.5
+	)
+	_hud.play_cinematic_subtitles(lines, func() -> void:
+		if tw != null and tw.is_running():
+			tw.kill()
+		_finish_opening_cinematic()
+	)
+
+
+func _finish_opening_cinematic() -> void:
+	if not _cinematic_active:
+		return
+	_cinematic_active = false
+	SaveManager.mark_intro_seen()
+	if _camera_rig != null:
+		_camera_rig.reset_view()
+		_camera_rig.snap_to_target()
+	if _player != null:
+		_player.movement_locked = false
+	_hud.show_story_chapter(1, "world_1_story")
+
+
 func _on_key_collected(_key_id: String) -> void:
 	_keys_collected += 1
+	if _boss != null and is_instance_valid(_boss):
+		_boss.react_to_progress()
 	_evaluate_door_conditions()
 	_hud.show_toast("toast_key_collected", 2.5)
 
@@ -435,6 +531,8 @@ func _on_plate_changed(plate_id: String, pressed: bool) -> void:
 	if _plate_bridges.has(plate_id):
 		for entry in (_plate_bridges[plate_id] as Array):
 			_set_body_active(entry["node"] as Node3D, entry["body"] as CollisionObject3D, pressed)
+	if pressed and _boss != null and is_instance_valid(_boss):
+		_boss.react_to_progress()
 	_evaluate_door_conditions()
 
 
@@ -447,6 +545,8 @@ func _evaluate_door_conditions() -> void:
 			active_door_plates += 1
 	_golden_door.update_conditions(_keys_collected, active_door_plates)
 	_hud.update_key_counter(_keys_collected, _golden_door.required_keys)
+	if _golden_door.is_unlocked and _boss != null and is_instance_valid(_boss):
+		_boss.on_door_unlocked()
 
 
 func _on_gravity_toggled(zone_id: String, reversed: bool) -> void:
@@ -532,10 +632,8 @@ func _restart_from_checkpoint() -> void:
 
 
 func _on_interaction_target_changed(target: Node) -> void:
-	if target != null and target.has_method("get_prompt_key"):
-		_hud.set_interaction_prompt(str(target.get_prompt_key()))
-	else:
-		_hud.set_interaction_prompt("")
+	var cam := _camera_rig.camera if _camera_rig != null else null
+	_hud.set_interaction_target(target, cam)
 
 
 func _on_stage_completed(door: GoldenDoor) -> void:
@@ -567,10 +665,10 @@ func _spawn_3d_starfield(count: int) -> void:
 	rng.seed = stage_id * 73 + 19
 	var star_mat := StandardMaterial3D.new()
 	star_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	star_mat.albedo_color = Color(0.92, 0.96, 1.0)
+	star_mat.albedo_color = Color(0.88, 0.94, 1.0)
 	var sph := SphereMesh.new()
-	sph.radius = 0.09
-	sph.height = 0.18
+	sph.radius = 0.085
+	sph.height = 0.17
 	sph.radial_segments = 4
 	sph.rings = 2
 	var mm := MultiMesh.new()
@@ -578,11 +676,11 @@ func _spawn_3d_starfield(count: int) -> void:
 	mm.mesh = sph
 	mm.instance_count = count
 	for i in range(count):
-		var dist := rng.randf_range(46.0, 78.0)
+		var dist := rng.randf_range(48.0, 82.0)
 		var theta := rng.randf_range(0.0, TAU)
-		var phi := rng.randf_range(-0.20, 0.92)
+		var phi := rng.randf_range(-0.18, 0.92)
 		var pos := Vector3(cos(theta) * cos(phi) * dist, sin(phi) * dist + 2.0, sin(theta) * cos(phi) * dist)
-		var sc := rng.randf_range(0.5, 1.45)
+		var sc := rng.randf_range(0.5, 1.35)
 		mm.set_instance_transform(i, Transform3D(Basis.from_scale(Vector3(sc, sc, sc)), pos))
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
@@ -595,6 +693,8 @@ func _exit_tree() -> void:
 		MonetizationBridge.ad_reward_granted.disconnect(_on_ad_reward_granted)
 	if MonetizationBridge.ad_unavailable.is_connected(_on_ad_unavailable):
 		MonetizationBridge.ad_unavailable.disconnect(_on_ad_unavailable)
+	if SaveManager.settings_changed.is_connected(_on_settings_changed):
+		SaveManager.settings_changed.disconnect(_on_settings_changed)
 
 
 static func _to_vec3(v: Variant) -> Vector3:
@@ -623,9 +723,26 @@ func _on_ad_unavailable(_placement: String, reason_key: String) -> void:
 
 
 func _build_energy_conduits() -> void:
-	## Draws subtle glowing energy wires on the ground linking each Pressure Plate to its target Bridge or Golden Door
-	## so puzzle causality is 100% visually readable.
-	var wire_mat := LowPolyMeshLibrary.make_flat_material(Color(0.28, 0.86, 1.0), 0.3, Color(0.28, 0.86, 1.0), 1.4)
+	## Redesigned puzzle causality guides: subtle low-profile glowing rune stones embedded along the path
+	## instead of crude straight cyan sticks floating across empty air; toggleable in Settings.
+	_conduit_root = Node3D.new()
+	_conduit_root.name = "PuzzleGuides"
+	_conduit_root.visible = bool(SaveManager.get_setting("puzzle_guides", true))
+	_world_root.add_child(_conduit_root)
+
+	var rune_mat := StandardMaterial3D.new()
+	rune_mat.albedo_color = Color(0.24, 0.78, 0.92, 0.58)
+	rune_mat.emission_enabled = true
+	rune_mat.emission = Color(0.22, 0.76, 0.94)
+	rune_mat.emission_energy_multiplier = 0.85
+	rune_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+
+	var dot_mesh := CylinderMesh.new()
+	dot_mesh.top_radius = 0.08
+	dot_mesh.bottom_radius = 0.11
+	dot_mesh.height = 0.03
+	dot_mesh.radial_segments = 6
+
 	for pid in _plates.keys():
 		var pl: PressurePlate = _plates[pid]
 		var targets: Array[Vector3] = []
@@ -634,20 +751,21 @@ func _build_energy_conduits() -> void:
 				var n := entry["node"] as Node3D
 				if n != null:
 					targets.append(n.position)
-		elif _golden_door != null:
+		elif _golden_door != null and _golden_door.required_switches > 0:
 			targets.append(_golden_door.position)
 		for tp in targets:
-			var a := Vector3(pl.position.x, pl.position.y + 0.04, pl.position.z)
-			var b := Vector3(tp.x, tp.y + 0.04, tp.z)
-			var diff := b - a
-			var dist := diff.length()
-			if dist < 0.5:
+			var a := Vector3(pl.position.x, pl.position.y + 0.03, pl.position.z)
+			var b := Vector3(tp.x, tp.y + 0.03, tp.z)
+			var dist := a.distance_to(b)
+			if dist < 0.8:
 				continue
-			var beam := MeshInstance3D.new()
-			var box := BoxMesh.new()
-			box.size = Vector3(0.08, 0.03, dist)
-			beam.mesh = box
-			beam.position = (a + b) * 0.5
-			beam.rotation.y = atan2(diff.x, diff.z)
-			beam.material_override = wire_mat
-			_world_root.add_child(beam)
+			# Place 3-6 subtle stepping runes only near plate & target, never cutting across void as a beam
+			var steps := clampi(int(dist / 2.2), 2, 6)
+			for s in range(1, steps):
+				var t := float(s) / float(steps)
+				var pt := a.lerp(b, t)
+				var m := MeshInstance3D.new()
+				m.mesh = dot_mesh
+				m.position = pt
+				m.material_override = rune_mat
+				_conduit_root.add_child(m)

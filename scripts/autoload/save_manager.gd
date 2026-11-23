@@ -1,6 +1,7 @@
 extends Node
 
-## Local offline JSON save system with backup recovery and settings persistence.
+## Local offline JSON save system with backup recovery, settings persistence,
+## difficulty selection, character cloak wardrobe unlocks, and cinematic progress.
 
 signal save_loaded
 signal progress_updated
@@ -8,7 +9,7 @@ signal settings_changed
 
 const SAVE_PATH := "user://beyond_the_door_save.json"
 const BACKUP_PATH := "user://beyond_the_door_save.bak.json"
-const SAVE_VERSION := 1
+const SAVE_VERSION := 2
 
 var data: Dictionary = {}
 
@@ -26,11 +27,16 @@ func _create_default_data() -> Dictionary:
 		"collected_secrets": [],
 		"unlocked_endings": [],
 		"stage_checkpoints": {},
+		"equipped_skin": "wanderer",
+		"unlocked_skins": ["wanderer"],
+		"intro_cinematic_seen": false,
 		"settings": {
 			"language": "ar",
 			"music_volume": 0.75,
 			"sfx_volume": 0.85,
 			"graphics_quality": "medium",
+			"difficulty": "normal",
+			"puzzle_guides": true,
 		},
 	}
 
@@ -78,15 +84,17 @@ func _merge_with_defaults(loaded: Dictionary) -> Dictionary:
 					sub[sub_k] = loaded_sub[sub_k]
 			else:
 				merged[key] = loaded[key]
-	# Clamp stage bounds defensively
 	merged["highest_unlocked_stage"] = clampi(int(merged["highest_unlocked_stage"]), 1, 120)
 	merged["last_played_stage"] = clampi(int(merged["last_played_stage"]), 1, 120)
+	var skins: Array = merged.get("unlocked_skins", ["wanderer"])
+	if not ("wanderer" in skins):
+		skins.append("wanderer")
+	merged["unlocked_skins"] = skins
 	return merged
 
 
 func save_game() -> bool:
 	var json_str := JSON.stringify(data, "\t")
-	# Write backup first if primary exists
 	if FileAccess.file_exists(SAVE_PATH):
 		var old_file := FileAccess.open(SAVE_PATH, FileAccess.READ)
 		if old_file != null:
@@ -129,7 +137,6 @@ func mark_stage_completed(stage_id: int) -> void:
 	if next_stage > int(data.get("highest_unlocked_stage", 1)):
 		data["highest_unlocked_stage"] = next_stage
 	data["last_played_stage"] = next_stage
-	# Clear stage checkpoint once completed
 	var cps: Dictionary = data.get("stage_checkpoints", {})
 	cps.erase(str(stage_id))
 	data["stage_checkpoints"] = cps
@@ -188,6 +195,52 @@ func is_ending_unlocked(ending_id: String) -> bool:
 	return ending_id in endings
 
 
+func get_equipped_skin() -> String:
+	return str(data.get("equipped_skin", "wanderer"))
+
+
+func set_equipped_skin(skin_id: String) -> void:
+	if not is_skin_unlocked(skin_id):
+		return
+	data["equipped_skin"] = skin_id
+	save_game()
+	progress_updated.emit()
+
+
+func is_skin_unlocked(skin_id: String) -> bool:
+	var skins: Array = data.get("unlocked_skins", ["wanderer"])
+	return skin_id in skins
+
+
+func unlock_skin(skin_id: String) -> bool:
+	var skins: Array = data.get("unlocked_skins", ["wanderer"])
+	if not (skin_id in skins):
+		skins.append(skin_id)
+		data["unlocked_skins"] = skins
+		save_game()
+		progress_updated.emit()
+		return true
+	return false
+
+
+func is_intro_seen() -> bool:
+	return bool(data.get("intro_cinematic_seen", false))
+
+
+func mark_intro_seen() -> void:
+	data["intro_cinematic_seen"] = true
+	save_game()
+
+
+func get_difficulty() -> String:
+	return str(get_setting("difficulty", "normal"))
+
+
+func set_difficulty(diff: String) -> void:
+	if diff in ["story", "normal", "master"]:
+		set_setting("difficulty", diff)
+
+
 func get_setting(key: String, default_value: Variant) -> Variant:
 	var settings: Dictionary = data.get("settings", {})
 	return settings.get(key, default_value)
@@ -203,7 +256,11 @@ func set_setting(key: String, value: Variant) -> void:
 
 func reset_progress() -> void:
 	var preserved_settings: Dictionary = (data.get("settings", {}) as Dictionary).duplicate(true)
+	var preserved_skins: Array = (data.get("unlocked_skins", ["wanderer"]) as Array).duplicate(true)
+	var preserved_equipped: String = get_equipped_skin()
 	data = _create_default_data()
 	data["settings"] = preserved_settings
+	data["unlocked_skins"] = preserved_skins
+	data["equipped_skin"] = preserved_equipped
 	save_game()
 	progress_updated.emit()
