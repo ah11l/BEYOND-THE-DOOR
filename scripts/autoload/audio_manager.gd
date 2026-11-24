@@ -1,6 +1,7 @@
 extends Node
 
-## Audio manager for ambient music and pooled SFX playback (prototype procedural WAV assets).
+## Audio manager for ambient music, pooled SFX playback, subtle spatial reverb,
+## and anti-overlap throttling so footsteps, jumps, landings, echoes, and doors stay crisp.
 
 const MUSIC_PATH := "res://assets/audio/music/ambient_void.wav"
 const SFX_PATHS := {
@@ -17,20 +18,26 @@ const SFX_PATHS := {
 	"gravity_flip": "res://assets/audio/sfx/gravity_flip.wav",
 	"portal_warp": "res://assets/audio/sfx/portal_warp.wav",
 	"ui_click": "res://assets/audio/sfx/ui_click.wav",
+	"footstep": "res://assets/audio/sfx/footstep.wav",
+	"jump": "res://assets/audio/sfx/jump.wav",
+	"land": "res://assets/audio/sfx/land.wav",
 }
 
 var _music_player: AudioStreamPlayer
 var _sfx_pool: Array[AudioStreamPlayer] = []
 var _sfx_streams: Dictionary = {}
+var _last_play_ms: Dictionary = {}
 var _pool_index: int = 0
 
 
 func _ready() -> void:
+	_setup_subtle_reverb()
+
 	_music_player = AudioStreamPlayer.new()
 	_music_player.bus = _resolve_bus(&"Music")
 	add_child(_music_player)
 
-	for i in range(6):
+	for i in range(8):
 		var p := AudioStreamPlayer.new()
 		p.bus = _resolve_bus(&"SFX")
 		add_child(p)
@@ -40,6 +47,21 @@ func _ready() -> void:
 	apply_volumes()
 	SaveManager.settings_changed.connect(apply_volumes)
 	play_ambient_music()
+
+
+func _setup_subtle_reverb() -> void:
+	var sfx_idx := AudioServer.get_bus_index(&"SFX")
+	if sfx_idx < 0:
+		return
+	for i in range(AudioServer.get_bus_effect_count(sfx_idx)):
+		if AudioServer.get_bus_effect(sfx_idx, i) is AudioEffectReverb:
+			return
+	var rev := AudioEffectReverb.new()
+	rev.room_size = 0.36
+	rev.damping = 0.55
+	rev.wet = 0.14
+	rev.dry = 0.92
+	AudioServer.add_bus_effect(sfx_idx, rev)
 
 
 func _resolve_bus(bus_name: StringName) -> StringName:
@@ -69,12 +91,19 @@ func play_ambient_music() -> void:
 		_music_player.play()
 
 
-func play_sfx(sfx_name: String, pitch_jitter: float = 0.04) -> void:
+func play_sfx(sfx_name: String, pitch_jitter: float = 0.05, volume_db: float = 0.0, min_cooldown_ms: int = 60) -> void:
 	if not _sfx_streams.has(sfx_name):
 		return
+	var now_ms := Time.get_ticks_msec()
+	var prev_ms := int(_last_play_ms.get(sfx_name, 0))
+	if now_ms - prev_ms < min_cooldown_ms:
+		return
+	_last_play_ms[sfx_name] = now_ms
+
 	var player := _sfx_pool[_pool_index]
 	_pool_index = (_pool_index + 1) % _sfx_pool.size()
 	player.stream = _sfx_streams[sfx_name]
+	player.volume_db = volume_db
 	player.pitch_scale = randf_range(1.0 - pitch_jitter, 1.0 + pitch_jitter)
 	player.play()
 

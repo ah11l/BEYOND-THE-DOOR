@@ -156,7 +156,7 @@ func has_lantern_insight() -> bool:
 
 
 func get_echo_duration() -> float:
-	var base := 7.0 if SaveManager.get_collected_secret_count() >= POWER_ECHO_CRYSTALS else 5.0
+	var base := 8.0 if SaveManager.get_collected_secret_count() >= POWER_ECHO_CRYSTALS else 6.0
 	match SaveManager.get_difficulty():
 		"story":
 			return base + 2.0

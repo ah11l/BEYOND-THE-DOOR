@@ -19,6 +19,8 @@ var _camera_rig: IsoCameraRig
 var _echo_recorder: EchoRecorder
 var _hud: GameHUD
 var _boss: GuardianBoss = null
+var _cinematic_director: CinematicDirector = null
+var _landmarks: WorldLandmarks = null
 
 var _golden_door: GoldenDoor = null
 var _purple_doors: Array[PurpleDoor] = []
@@ -33,6 +35,7 @@ var _keys_collected: int = 0
 var _active_room_state: int = 0
 var _respawn_pos: Vector3 = Vector3(0.0, 0.25, 0.0)
 var _respawn_world_side: int = 0
+var _respawn_room_state: int = 0
 var _stage_center: Vector3 = Vector3.ZERO
 var _stage_span: float = 14.0
 var _cinematic_active: bool = false
@@ -62,20 +65,17 @@ func _ready() -> void:
 
 	SaveManager.settings_changed.connect(_on_settings_changed)
 
-	# First-time 3D Opening Cinematic on Stage 1, else World Chapter Story Card or stage intro
-	var world_starts := {1: "world_1_story", 21: "world_2_story", 41: "world_3_story", 61: "world_4_story", 81: "world_5_story", 101: "world_6_story"}
-	if not SaveManager.is_intro_seen():
-		_play_opening_cinematic()
-	else:
-		_camera_rig.configure_stage_framing(_stage_center, _stage_span, true)
-		if world_starts.has(stage_id):
-			_hud.show_story_chapter(int(stage_def.get("world", 1)), str(world_starts[stage_id]))
-		elif _boss != null:
-			_hud.show_toast("boss_w%d_intro" % int(stage_def.get("world", 1)), 5.5)
-		else:
-			var intro_hint := str(stage_def.get("hint_key", ""))
-			if not intro_hint.is_empty():
-				_hud.show_toast(intro_hint, 4.8)
+	_landmarks = WorldLandmarks.new()
+	_landmarks.name = "WorldLandmarks"
+	_world_root.add_child(_landmarks)
+	_landmarks.build_for_world(int(stage_def.get("world", 1)), _stage_center, _stage_span)
+
+	_cinematic_director = CinematicDirector.new()
+	_cinematic_director.name = "CinematicDirector"
+	add_child(_cinematic_director)
+
+	# Trigger real 3D in-engine cinematics (Opening, 6 World Intros, 6 Mid-World Echo/Guardian Scenes, Boss Entrances)
+	_trigger_stage_cinematic_if_any()
 
 
 func _on_settings_changed() -> void:
@@ -607,8 +607,9 @@ func _on_black_door_transfer(_door: BlackDoor, target_pos: Vector3, target_world
 
 
 func _on_checkpoint_reached(cp_id: String, spawn_pos: Vector3) -> void:
-	_respawn_pos = spawn_pos
+	_respawn_pos = spawn_pos + Vector3(0.0, 0.35, 0.0)
 	_respawn_world_side = _player.current_world_side if _player != null else 0
+	_respawn_room_state = _active_room_state
 	SaveManager.save_checkpoint(stage_id, cp_id)
 	_hud.show_toast("toast_checkpoint", 2.4)
 
@@ -634,6 +635,7 @@ func _on_player_fell() -> void:
 func _restart_from_checkpoint() -> void:
 	if _echo_recorder != null:
 		_echo_recorder.reset_echo()
+	_apply_room_state(_respawn_room_state)
 	if _player != null:
 		_player.reset_gravity_zone()
 		_player.global_position = _respawn_pos
@@ -883,3 +885,66 @@ func _auto_dress_lush_islands() -> void:
 			cr.scale = Vector3(0.75, 0.75, 0.75)
 			_world_root.add_child(cr)
 			keep_clear.append(front_left)
+
+
+func _trigger_stage_cinematic_if_any() -> void:
+	var w_idx: int = int(stage_def.get("world", 1))
+	var door_pos: Vector3 = _golden_door.position if _golden_door != null else _stage_center
+	var p_pos: Vector3 = _player.global_position if _player != null else Vector3.ZERO
+
+	# 1. Opening Cinematic on very first play
+	if not SaveManager.is_intro_seen():
+		_cinematic_director.play_sequence(
+			_world_root, _camera_rig, _player, _hud,
+			door_pos + Vector3(0.0, 2.2, 0.0), p_pos,
+			Vector3(16.0, 13.0, 16.0), _camera_rig.base_offset,
+			["intro_line_1", "intro_line_2", "intro_line_3", "intro_line_4"],
+			p_pos + Vector3(1.6, 0.0, -1.2), Vector3(9999.0, 0.0, 0.0),
+			func() -> void: SaveManager.mark_intro_seen()
+		)
+		return
+
+	# 2. Unique 3D World Intro Cinematics (Stages 1, 21, 41, 61, 81, 101)
+	var world_starts: Dictionary = {1: "world_1_story", 21: "world_2_story", 41: "world_3_story", 61: "world_4_story", 81: "world_5_story", 101: "world_6_story"}
+	if world_starts.has(stage_id):
+		var sweep_off: Vector3 = Vector3(17.0, 12.5, 13.0).rotated(Vector3.UP, float(w_idx - 1) * 0.45)
+		var echo_pos: Vector3 = p_pos + Vector3(1.5, 0.0, -1.4)
+		var guard_pos: Vector3 = (door_pos + Vector3(0.0, 3.6, -1.5)) if w_idx >= 3 else Vector3(9999.0, 0.0, 0.0)
+		_cinematic_director.play_sequence(
+			_world_root, _camera_rig, _player, _hud,
+			_stage_center + Vector3(0.0, 2.4, 0.0), p_pos,
+			sweep_off, _camera_rig.base_offset,
+			[str(world_starts[stage_id]), "world_cine_w%d" % w_idx],
+			echo_pos, guard_pos
+		)
+		return
+
+	# 3. Mid-World Story Discovery & Echo/Guardian Confrontation Cinematics (Stages 10, 30, 50, 70, 90, 110)
+	var mid_stages: Dictionary = {10: 1, 30: 2, 50: 3, 70: 4, 90: 5, 110: 6}
+	if mid_stages.has(stage_id):
+		var mw: int = int(mid_stages[stage_id])
+		_cinematic_director.play_sequence(
+			_world_root, _camera_rig, _player, _hud,
+			p_pos + Vector3(0.0, 1.2, 0.0), p_pos,
+			Vector3(6.8, 5.2, 6.8), _camera_rig.base_offset,
+			["mid_w%d_1" % mw, "mid_w%d_2" % mw],
+			p_pos + Vector3(1.4, 0.0, -1.1),
+			(p_pos + Vector3(-2.4, 3.0, -2.4)) if mw >= 3 else Vector3(9999.0, 0.0, 0.0)
+		)
+		return
+
+	# 4. Boss Entrance 3D Cinematics (Stages 5, 20, 40, 60, 80, 100, 120)
+	if _boss != null and is_instance_valid(_boss):
+		_cinematic_director.play_sequence(
+			_world_root, _camera_rig, _player, _hud,
+			_boss.global_position, p_pos,
+			Vector3(9.5, 6.5, 9.5), _camera_rig.base_offset,
+			["boss_w%d_intro" % w_idx]
+		)
+		return
+
+	# 5. Normal stage framing glide + short objective toast
+	_camera_rig.configure_stage_framing(_stage_center, _stage_span, true)
+	var intro_hint: String = str(stage_def.get("hint_key", ""))
+	if not intro_hint.is_empty():
+		_hud.show_toast(intro_hint, 4.5)

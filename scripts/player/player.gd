@@ -13,8 +13,8 @@ signal fell_into_void
 @export var acceleration: float = 28.0
 @export var air_acceleration: float = 16.0
 @export var deceleration: float = 30.0
-@export var jump_velocity: float = 6.8
-@export var base_gravity: float = 18.5
+@export var jump_velocity: float = 5.6
+@export var base_gravity: float = 20.5
 @export var void_y_threshold: float = -10.0
 
 const JUMP_BUFFER_TIME := 0.14
@@ -36,6 +36,7 @@ var _coyote_timer: float = 0.0
 var _jump_buffer_timer: float = 0.0
 var _active_gravity_zones: Dictionary = {}
 var _was_on_floor: bool = true
+var _step_timer: float = 0.0
 
 
 func _ready() -> void:
@@ -116,7 +117,7 @@ func _physics_process(delta: float) -> void:
 
 	var on_floor_now := is_on_floor()
 	if on_floor_now and not _was_on_floor and velocity.y <= -2.5:
-		AudioManager.play_sfx("ui_click")
+		AudioManager.play_sfx("land", 0.08, -3.5, 120)
 	_was_on_floor = on_floor_now
 
 	if on_floor_now:
@@ -137,10 +138,11 @@ func _physics_process(delta: float) -> void:
 		velocity.y = -0.1
 
 	if _jump_buffer_timer > 0.0 and _coyote_timer > 0.0:
-		var mult := 1.45 if gravity_scale < 0.7 else 1.0
+		var mult := 1.60 if gravity_scale < 0.7 else 1.0
 		velocity.y = jump_velocity * mult
 		_coyote_timer = 0.0
 		_jump_buffer_timer = 0.0
+		AudioManager.play_sfx("jump", 0.06, -4.5, 120)
 
 	var input_vec := _get_move_input()
 	var move_dir := _to_isometric_direction(input_vec)
@@ -153,6 +155,11 @@ func _physics_process(delta: float) -> void:
 		var target_yaw := atan2(-move_dir.x, -move_dir.z)
 		rotation.y = lerp_angle(rotation.y, target_yaw, minf(1.0, 15.0 * delta))
 		_bob_time += delta * (7.0 + move_dir.length() * 5.0)
+		if on_floor_now:
+			_step_timer -= delta
+			if _step_timer <= 0.0:
+				_step_timer = 0.34
+				AudioManager.play_sfx("footstep", 0.10, -7.5, 220)
 	else:
 		velocity.x = move_toward(velocity.x, 0.0, deceleration * delta)
 		velocity.z = move_toward(velocity.z, 0.0, deceleration * delta)

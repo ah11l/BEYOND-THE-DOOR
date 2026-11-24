@@ -1,7 +1,7 @@
 class_name TranslationsData
 extends RefCounted
 
-## Embedded bilingual translation tables (V17 — 820 synced EN/AR keys).
+## Embedded bilingual translation tables (V23 — 838 synced EN/AR keys).
 
 const TABLES := {
 	"en": {
@@ -421,6 +421,18 @@ const TABLES := {
 		"menu_settings": "Settings",
 		"menu_stage_select": "Stage Select",
 		"menu_wardrobe": "Characters",
+		"mid_w1_1": "Echo: 'You move faster than before... almost as if your feet already know these bridges.'",
+		"mid_w1_2": "A strange feeling lingers — why does your Echo know the way before you do?",
+		"mid_w2_1": "Echo: 'The Blue Doors were built to save us from falling.'",
+		"mid_w2_2": "Yet the ancient stone says the opposite: the sky was inverted to trap something inside.",
+		"mid_w3_1": "Guardian: 'Stop trusting the shadow behind you. Ask it why the clocks froze!'",
+		"mid_w3_2": "Echo falls silent for the first time — its cyan light flickers nervously.",
+		"mid_w4_1": "Guardian: 'You erased your own mind because you couldn't bear to turn off the machine yourself.'",
+		"mid_w4_2": "Echo: 'Lies! Keep walking toward the Black Doors — we are almost home!'",
+		"mid_w5_1": "In the floating crystal mirror, your reflection wears the Architect's crown.",
+		"mid_w5_2": "Echo: 'Yes — I am your fear! Without me, you would have let everyone fade away!'",
+		"mid_w6_1": "Guardian: 'My watch ends here, Architect. Whatever you choose at Stage 120, choose with open eyes.'",
+		"mid_w6_2": "Echo: 'Remember the lantern in Stage 1... you lit it so we could meet one last time.'",
 		"parchment_note_title": "Ancient Note",
 		"power_echo_unlocked": "Crystal Power (25 ◆): Extended 7-Second Echo unlocked!",
 		"power_insight_unlocked": "Crystal Power (10 ◆): Lantern Insight unlocked!",
@@ -824,6 +836,12 @@ const TABLES := {
 		"world_5_story": "Chapter V — Sea of Mirrors: The truth breaks through the glass: YOU are the Architect. Echo is the fearful piece of you that froze time to survive, while the Guardian is the conscience you left behind to stop yourself.",
 		"world_6_name": "Beyond the Door",
 		"world_6_story": "Final Chapter — Beyond the Door: All four doors converge. Reach Stage 120, face your Echo before the ancient gate, and remember why your lantern lit itself in Stage 1.",
+		"world_cine_w1": "Echo: 'Follow the golden gates — together we can mend what broke.'",
+		"world_cine_w2": "Echo: 'The trees still whisper your name... don't listen to the shadows.'",
+		"world_cine_w3": "Guardian: 'Every stopped clock marks the exact second you refused to let go.'",
+		"world_cine_w4": "Guardian: 'Look into the Abyss — the twin world is starving the real one.'",
+		"world_cine_w5": "Echo: 'Do not look into the mirrors! If you remember, you will erase me!'",
+		"world_cine_w6": "The Architect's Sanctuary opens. Every door you built now waits for your verdict.",
 		"world_label": "World",
 	},
 	"ar": {
@@ -1243,6 +1261,18 @@ const TABLES := {
 		"menu_settings": "الإعدادات",
 		"menu_stage_select": "اختيار المرحلة",
 		"menu_wardrobe": "الشخصيات",
+		"mid_w1_1": "الصدى: «خطواتك أسرع من قبل… كأن قدميك تعرفان هذه الجسور مسبقاً.»",
+		"mid_w1_2": "شعورٌ غريب يراودك: كيف يعرف صداك الطريق قبل أن تكتشفه أنت؟",
+		"mid_w2_1": "الصدى: «الأبواب الزرقاء صُنعت لتنقذنا من السقوط.»",
+		"mid_w2_2": "لكن النقش القديم يقول العكس: انقلبت السماء لتحبس شيئاً في الداخل.",
+		"mid_w3_1": "الحارس: «كفّ عن تصديق الظل الذي يتبعك. اسأله لماذا تجمّدت الساعات!»",
+		"mid_w3_2": "يصمت الصدى لأول مرة… ويرتجف نوره السماوي بقلقٍ واضح.",
+		"mid_w4_1": "الحارس: «محوتَ ذاكرتك بنفسك لأنك لم تقوَ على إطفاء الآلة بيدك.»",
+		"mid_w4_2": "الصدى: «أكاذيب! واصل السير نحو الأبواب السوداء… اقتربنا من العودة!»",
+		"mid_w5_1": "في المرآة الكريستالية العائمة، ينعكس وجهك مرتدياً تاج المعماري.",
+		"mid_w5_2": "الصدى: «نعم… أنا خوفك! لولاي لكنتَ تركتَ كل من أحببتَ يتلاشى!»",
+		"mid_w6_1": "الحارس: «انتهت حراستي هنا أيها المعماري. اختر مصير المرحلة 120 بعينين مفتوحتين.»",
+		"mid_w6_2": "الصدى: «تذكّر الفانوس في المرحلة الأولى… أنت أشعلتَه كي نلتقي للمرة الأخيرة.»",
 		"parchment_note_title": "ملاحظة قديمة",
 		"power_echo_unlocked": "قدرة الجواهر (25 ◆): تم فتح «صدى ممتد — 7 ثوانٍ»!",
 		"power_insight_unlocked": "قدرة الجواهر (10 ◆): تم فتح «بصيرة الفانوس»!",
@@ -1646,6 +1676,12 @@ const TABLES := {
 		"world_5_story": "الفصل الخامس — بحر المرايا: تتكشّف الحقيقة المؤلمة — أنت نفسك «المعماري». الصدى هو جزء خوفك الذي جمّد الزمن ليبقى حيّاً، أما الحارس فهو ضميرك الذي تركتَه ليوقفك.",
 		"world_6_name": "ما وراء الباب",
 		"world_6_story": "الفصل الأخير — ما وراء الباب: تجتمع الأبواب الأربعة في الاختبار الأخير. اصل إلى المرحلة 120، واجه صداك أمام الباب القديم، وتذكّر لماذا اشتعل فانوسك وحده في المرحلة الأولى.",
+		"world_cine_w1": "الصدى: «اتبع البوابات الذهبية… معاً سنُصلح ما انكسر.»",
+		"world_cine_w2": "الصدى: «الأشجار لا تزال تهمس باسمك… لا تُصغِ للظلال.»",
+		"world_cine_w3": "الحارس: «كل ساعة متوقفة هنا تشير للثانية التي رفضتَ فيها أن تتخلى.»",
+		"world_cine_w4": "الحارس: «انظر إلى الهاوية… العالم التوأم يبتلع حياة العالم الحقيقي.»",
+		"world_cine_w5": "الصدى: «لا تنظر في المرايا! إن تذكّرتَ الحقيقة… ستمحوني!»",
+		"world_cine_w6": "ينفتح محراب المعماري. كل بابٍ بنيتَه ينتظر حكمك الأخير الآن.",
 		"world_label": "العالم",
 	},
 }
