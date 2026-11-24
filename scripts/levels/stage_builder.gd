@@ -102,8 +102,8 @@ func _setup_environment() -> void:
 	env.ambient_light_energy = 0.82
 	env.fog_enabled = true
 	env.fog_light_color = world_palette["fog"] as Color
-	env.fog_density = 0.0045
-	env.fog_sky_affect = 0.25
+	env.fog_density = LowPolyMeshLibrary.get_world_fog_density(w_idx)
+	env.fog_sky_affect = 0.45
 	env.glow_enabled = true
 	env.glow_intensity = 0.34
 	env.glow_bloom = 0.12
@@ -655,7 +655,8 @@ func _restart_from_checkpoint() -> void:
 		_player.current_world_side = _respawn_world_side
 		_camera_rig.snap_to_target()
 	for pb in _pushable_blocks:
-		pb.reset_block()
+		if pb.global_position.y < -4.0 or pb.initial_position.distance_to(_respawn_pos) < 8.5:
+			pb.reset_block()
 	_hud.show_toast("toast_respawned", 2.0)
 
 

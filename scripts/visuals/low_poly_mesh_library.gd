@@ -129,17 +129,46 @@ const TEX_COSMIC_SKY := "res://assets/textures/cosmic_sky.png"
 const TEX_RUNE_BLOCK_ALBEDO := "res://assets/textures/rune_block_albedo.png"
 const TEX_RUNE_BLOCK_EMISSION := "res://assets/textures/rune_block_emission.png"
 
+## Explicit preloads guarantee Godot 4.5 Android APK export packs & loads ALL 6 world textures!
+const PRELOAD_WORLD_TOP := {
+	1: preload("res://assets/textures/world_1_top.png"),
+	2: preload("res://assets/textures/world_2_top.png"),
+	3: preload("res://assets/textures/world_3_top.png"),
+	4: preload("res://assets/textures/world_4_top.png"),
+	5: preload("res://assets/textures/world_5_top.png"),
+	6: preload("res://assets/textures/world_6_top.png"),
+}
+const PRELOAD_WORLD_CLIFF := {
+	1: preload("res://assets/textures/world_1_cliff.png"),
+	2: preload("res://assets/textures/world_2_cliff.png"),
+	3: preload("res://assets/textures/world_3_cliff.png"),
+	4: preload("res://assets/textures/world_4_cliff.png"),
+	5: preload("res://assets/textures/world_5_cliff.png"),
+	6: preload("res://assets/textures/world_6_cliff.png"),
+}
+const PRELOAD_W4_TOP_EMISSION: Texture2D = preload("res://assets/textures/world_4_top_emission.png")
+const PRELOAD_RUNE_ALBEDO: Texture2D = preload("res://assets/textures/rune_block_albedo.png")
+const PRELOAD_RUNE_EMISSION: Texture2D = preload("res://assets/textures/rune_block_emission.png")
+
 
 static func get_world_top_texture_path(world_index: int) -> String:
-	var w := clampi(world_index, 1, 6)
-	var candidate := "res://assets/textures/world_%d_top.png" % w
-	return candidate if ResourceLoader.exists(candidate) else TEX_ISLAND_TOP
+	return "res://assets/textures/world_%d_top.png" % clampi(world_index, 1, 6)
 
 
 static func get_world_cliff_texture_path(world_index: int) -> String:
-	var w := clampi(world_index, 1, 6)
-	var candidate := "res://assets/textures/world_%d_cliff.png" % w
-	return candidate if ResourceLoader.exists(candidate) else TEX_CLIFF_ROCK
+	return "res://assets/textures/world_%d_cliff.png" % clampi(world_index, 1, 6)
+
+
+static func make_preloaded_material(tex: Texture2D, tint: Color = Color.WHITE, roughness: float = 0.84, uv_scale: Vector3 = Vector3(1.0, 1.0, 1.0), triplanar: bool = true, metallic: float = 0.04) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = tint
+	mat.roughness = roughness
+	mat.metallic = metallic
+	if tex != null:
+		mat.albedo_texture = tex
+		mat.uv1_triplanar = triplanar
+		mat.uv1_scale = uv_scale
+	return mat
 
 
 static func make_textured_material(tex_path: String, tint: Color = Color.WHITE, roughness: float = 0.84, uv_scale: Vector3 = Vector3(1.0, 1.0, 1.0), triplanar: bool = true, metallic: float = 0.04) -> StandardMaterial3D:
@@ -176,38 +205,72 @@ static func make_rune_block_material(world_index: int = 1) -> StandardMaterial3D
 		mat.roughness = 0.74
 		mat.metallic = 0.10
 
-	var alb := load(TEX_RUNE_BLOCK_ALBEDO) as Texture2D
-	if alb != null:
-		mat.albedo_texture = alb
-	var em := load(TEX_RUNE_BLOCK_EMISSION) as Texture2D
-	if em != null:
-		mat.emission_enabled = true
-		mat.emission = rune_col
-		mat.emission_texture = em
-		mat.emission_energy_multiplier = 1.65
+	mat.albedo_texture = PRELOAD_RUNE_ALBEDO
+	mat.emission_enabled = true
+	mat.emission = rune_col
+	mat.emission_texture = PRELOAD_RUNE_EMISSION
+	mat.emission_energy_multiplier = 1.75
 	return mat
 
 
 static func build_cosmic_sky(world_index: int = 1) -> Sky:
-	var pal := get_world_palette(world_index)
+	## 6 unmistakably distinct world skies (high-contrast horizon & atmosphere per world)
+	var w := clampi(world_index, 1, 6)
 	var sky := Sky.new()
-	if world_index == 6:
-		# World 6: Dawn-gold breaking over deep starry sky
-		var psm := ProceduralSkyMaterial.new()
-		psm.sky_top_color = pal.get("sky_top", Color(0.05, 0.04, 0.11))
-		psm.sky_horizon_color = Color(0.72, 0.44, 0.16)
-		psm.ground_bottom_color = Color(0.08, 0.06, 0.12)
-		psm.ground_horizon_color = Color(0.54, 0.32, 0.14)
-		psm.sun_angle_max = 36.0
-		psm.sun_curve = 0.18
-		sky.sky_material = psm
-		return sky
-	var pmat := PanoramaSkyMaterial.new()
-	var tex := load(TEX_COSMIC_SKY) as Texture2D
-	if tex != null:
-		pmat.panorama = tex
-	sky.sky_material = pmat
+	var psm := ProceduralSkyMaterial.new()
+	match w:
+		1: # World 1: Starry Indigo-Navy Night (Forgotten Islands)
+			psm.sky_top_color = Color(0.03, 0.05, 0.15)
+			psm.sky_horizon_color = Color(0.14, 0.22, 0.44)
+			psm.ground_bottom_color = Color(0.02, 0.04, 0.10)
+			psm.ground_horizon_color = Color(0.10, 0.16, 0.34)
+		2: # World 2: Vivid Emerald-Teal Forest Mist (Whispering Forest)
+			psm.sky_top_color = Color(0.02, 0.14, 0.13)
+			psm.sky_horizon_color = Color(0.10, 0.46, 0.38)
+			psm.ground_bottom_color = Color(0.01, 0.08, 0.08)
+			psm.ground_horizon_color = Color(0.06, 0.32, 0.28)
+		3: # World 3: Warm Amber-Sunset & Twilight Violet (City of Stopped Clocks)
+			psm.sky_top_color = Color(0.16, 0.07, 0.22)
+			psm.sky_horizon_color = Color(0.76, 0.40, 0.20)
+			psm.ground_bottom_color = Color(0.10, 0.05, 0.14)
+			psm.ground_horizon_color = Color(0.52, 0.26, 0.16)
+		4: # World 4: Eerie Deep Black-Cyan Abyss (The Silent Abyss)
+			psm.sky_top_color = Color(0.01, 0.04, 0.07)
+			psm.sky_horizon_color = Color(0.05, 0.34, 0.42)
+			psm.ground_bottom_color = Color(0.01, 0.02, 0.04)
+			psm.ground_horizon_color = Color(0.03, 0.22, 0.28)
+		5: # World 5: Luminous Lavender & Silver-Indigo Nebula (Sea of Mirrors)
+			psm.sky_top_color = Color(0.12, 0.07, 0.28)
+			psm.sky_horizon_color = Color(0.48, 0.36, 0.78)
+			psm.ground_bottom_color = Color(0.08, 0.06, 0.20)
+			psm.ground_horizon_color = Color(0.34, 0.28, 0.62)
+		6: # World 6: Radiant Golden Sunrise Celestial Sanctuary (Beyond the Door)
+			psm.sky_top_color = Color(0.10, 0.07, 0.20)
+			psm.sky_horizon_color = Color(0.94, 0.62, 0.24)
+			psm.ground_bottom_color = Color(0.14, 0.09, 0.16)
+			psm.ground_horizon_color = Color(0.76, 0.48, 0.20)
+	psm.sky_curve = 0.28
+	psm.ground_curve = 0.22
+	sky.sky_material = psm
 	return sky
+
+
+static func get_world_fog_density(world_index: int) -> float:
+	match clampi(world_index, 1, 6):
+		1:
+			return 0.009
+		2:
+			return 0.018
+		3:
+			return 0.015
+		4:
+			return 0.022
+		5:
+			return 0.014
+		6:
+			return 0.012
+		_:
+			return 0.012
 
 
 static func get_world_palette(world_index: int) -> Dictionary:
@@ -267,16 +330,17 @@ static func create_floating_island_mesh(size: Vector3, top_color: Color, side_co
 			_add_flat_tri(st_top, p00, p11, p01, Color.WHITE)
 
 	var mesh := st_top.commit()
-	var top_tex := get_world_top_texture_path(world_index)
+	var w_clamped := clampi(world_index, 1, 6)
+	var top_tex: Texture2D = PRELOAD_WORLD_TOP[w_clamped]
 	var top_rough := float(pal.get("roughness", 0.84))
 	var top_metal := float(pal.get("metallic", 0.04))
-	var top_tint := Color.WHITE.lerp(top_color, 0.30)
-	var top_mat := make_textured_material(top_tex, top_tint, top_rough, Vector3(0.24, 0.24, 0.24), true, top_metal)
-	if world_index == 4:
-		# Subtle abyssal glow boost on cracks
+	var top_tint := Color.WHITE.lerp(top_color, 0.22)
+	var top_mat := make_preloaded_material(top_tex, top_tint, top_rough, Vector3(0.24, 0.24, 0.24), true, top_metal)
+	if w_clamped == 4:
 		top_mat.emission_enabled = true
-		top_mat.emission = Color(0.06, 0.28, 0.30)
-		top_mat.emission_energy_multiplier = 0.22
+		top_mat.emission = Color(0.24, 0.96, 1.0)
+		top_mat.emission_texture = PRELOAD_W4_TOP_EMISSION
+		top_mat.emission_energy_multiplier = 1.55
 	mesh.surface_set_material(0, top_mat)
 
 	# Surface 1: Faceted Cliff Rock Sides & Tapered Underside
@@ -309,9 +373,9 @@ static func create_floating_island_mesh(size: Vector3, top_color: Color, side_co
 		_add_flat_tri(st_cliff, mid_ring[i], bottom_tip, mid_ring[ni], Color.WHITE)
 
 	st_cliff.commit(mesh)
-	var cliff_tex := get_world_cliff_texture_path(world_index)
-	var cliff_tint := Color.WHITE.lerp(side_color, 0.30)
-	mesh.surface_set_material(1, make_textured_material(cliff_tex, cliff_tint, 0.88, Vector3(0.28, 0.28, 0.28), true, top_metal * 0.5))
+	var cliff_tex: Texture2D = PRELOAD_WORLD_CLIFF[w_clamped]
+	var cliff_tint := Color.WHITE.lerp(side_color, 0.22)
+	mesh.surface_set_material(1, make_preloaded_material(cliff_tex, cliff_tint, 0.86, Vector3(0.28, 0.28, 0.28), true, top_metal * 0.5))
 	return mesh
 
 
