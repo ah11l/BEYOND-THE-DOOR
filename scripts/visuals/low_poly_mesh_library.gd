@@ -147,8 +147,18 @@ const PRELOAD_WORLD_CLIFF := {
 	6: preload("res://assets/textures/world_6_cliff.png"),
 }
 const PRELOAD_W4_TOP_EMISSION: Texture2D = preload("res://assets/textures/world_4_top_emission.png")
+const PRELOAD_WORLD_TOP_NORMAL := {
+	1: preload("res://assets/textures/world_1_top_normal.png"),
+	2: preload("res://assets/textures/world_2_top_normal.png"),
+	3: preload("res://assets/textures/world_3_top_normal.png"),
+	4: preload("res://assets/textures/world_4_top_normal.png"),
+	5: preload("res://assets/textures/world_5_top_normal.png"),
+	6: preload("res://assets/textures/world_6_top_normal.png"),
+}
 const PRELOAD_RUNE_ALBEDO: Texture2D = preload("res://assets/textures/rune_block_albedo.png")
 const PRELOAD_RUNE_EMISSION: Texture2D = preload("res://assets/textures/rune_block_emission.png")
+const PRELOAD_RUNE_NORMAL: Texture2D = preload("res://assets/textures/rune_block_normal.png")
+const PRELOAD_WOOD_NORMAL: Texture2D = preload("res://assets/textures/wood_planks_normal.png")
 
 
 static func get_world_top_texture_path(world_index: int) -> String:
@@ -159,15 +169,20 @@ static func get_world_cliff_texture_path(world_index: int) -> String:
 	return "res://assets/textures/world_%d_cliff.png" % clampi(world_index, 1, 6)
 
 
-static func make_preloaded_material(tex: Texture2D, tint: Color = Color.WHITE, roughness: float = 0.84, uv_scale: Vector3 = Vector3(1.0, 1.0, 1.0), triplanar: bool = true, metallic: float = 0.04) -> StandardMaterial3D:
+static func make_preloaded_material(tex: Texture2D, tint: Color = Color.WHITE, roughness: float = 0.84, uv_scale: Vector3 = Vector3(1.0, 1.0, 1.0), triplanar: bool = true, metallic: float = 0.04, normal_tex: Texture2D = null, normal_strength: float = 1.15) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = tint
 	mat.roughness = roughness
 	mat.metallic = metallic
+	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	if tex != null:
 		mat.albedo_texture = tex
 		mat.uv1_triplanar = triplanar
 		mat.uv1_scale = uv_scale
+	if normal_tex != null:
+		mat.normal_enabled = true
+		mat.normal_texture = normal_tex
+		mat.normal_scale = normal_strength
 	return mat
 
 
@@ -177,10 +192,15 @@ static func make_textured_material(tex_path: String, tint: Color = Color.WHITE, 
 	mat.roughness = roughness
 	mat.metallic = metallic
 	var tex := load(tex_path) as Texture2D
+	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	if tex != null:
 		mat.albedo_texture = tex
 		mat.uv1_triplanar = triplanar
 		mat.uv1_scale = uv_scale
+	if tex_path == TEX_WOOD_PLANKS:
+		mat.normal_enabled = true
+		mat.normal_texture = PRELOAD_WOOD_NORMAL
+		mat.normal_scale = 1.10
 	return mat
 
 
@@ -206,10 +226,15 @@ static func make_rune_block_material(world_index: int = 1) -> StandardMaterial3D
 		mat.metallic = 0.10
 
 	mat.albedo_texture = PRELOAD_RUNE_ALBEDO
+	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	mat.normal_enabled = true
+	mat.normal_texture = PRELOAD_RUNE_NORMAL
+	mat.normal_scale = 1.35
 	mat.emission_enabled = true
+	mat.emission_operator = BaseMaterial3D.EMISSION_OP_MULTIPLY
 	mat.emission = rune_col
 	mat.emission_texture = PRELOAD_RUNE_EMISSION
-	mat.emission_energy_multiplier = 1.75
+	mat.emission_energy_multiplier = 2.10
 	return mat
 
 
@@ -335,12 +360,14 @@ static func create_floating_island_mesh(size: Vector3, top_color: Color, side_co
 	var top_rough := float(pal.get("roughness", 0.84))
 	var top_metal := float(pal.get("metallic", 0.04))
 	var top_tint := Color.WHITE.lerp(top_color, 0.22)
-	var top_mat := make_preloaded_material(top_tex, top_tint, top_rough, Vector3(0.24, 0.24, 0.24), true, top_metal)
+	var top_norm: Texture2D = PRELOAD_WORLD_TOP_NORMAL[w_clamped]
+	var top_mat := make_preloaded_material(top_tex, top_tint, top_rough, Vector3(0.24, 0.24, 0.24), true, top_metal, top_norm, 1.25)
 	if w_clamped == 4:
 		top_mat.emission_enabled = true
+		top_mat.emission_operator = BaseMaterial3D.EMISSION_OP_MULTIPLY
 		top_mat.emission = Color(0.24, 0.96, 1.0)
 		top_mat.emission_texture = PRELOAD_W4_TOP_EMISSION
-		top_mat.emission_energy_multiplier = 1.55
+		top_mat.emission_energy_multiplier = 2.20
 	mesh.surface_set_material(0, top_mat)
 
 	# Surface 1: Faceted Cliff Rock Sides & Tapered Underside
@@ -626,6 +653,22 @@ static func create_wooden_cabin(scale_factor: float = 1.0) -> Node3D:
 	win.position = Vector3(0.0, 0.56 * scale_factor, 0.66 * scale_factor)
 	win.material_override = win_mat
 	root.add_child(win)
+
+	var plinth := MeshInstance3D.new()
+	var pb := BoxMesh.new()
+	pb.size = Vector3(1.66, 0.18, 1.46) * scale_factor
+	plinth.mesh = pb
+	plinth.position = Vector3(0.0, 0.09 * scale_factor, 0.0)
+	plinth.material_override = make_flat_material(Color(0.24, 0.25, 0.32), 0.88)
+	root.add_child(plinth)
+
+	var frame := MeshInstance3D.new()
+	var fb := BoxMesh.new()
+	fb.size = Vector3(0.42, 0.42, 0.04) * scale_factor
+	frame.mesh = fb
+	frame.position = Vector3(0.0, 0.56 * scale_factor, 0.64 * scale_factor)
+	frame.material_override = roof_mat
+	root.add_child(frame)
 	return root
 
 

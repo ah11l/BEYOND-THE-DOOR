@@ -61,7 +61,21 @@ static func quality_label_ar(q: String) -> String:
 	match q:
 		"low":
 			return "منخفض" if LocalizationManager.is_rtl() else "Low"
-		"high":
-			return "عالي" if LocalizationManager.is_rtl() else "High"
-		_:
+		"medium":
 			return "متوسط" if LocalizationManager.is_rtl() else "Medium"
+		"ultra":
+			return "فائق (Ultra)" if LocalizationManager.is_rtl() else "Ultra"
+		_:
+			return "عالي" if LocalizationManager.is_rtl() else "High"
+
+
+static func next_quality(q: String) -> String:
+	match q:
+		"low":
+			return "medium"
+		"medium":
+			return "high"
+		"high":
+			return "ultra"
+		_:
+			return "low"

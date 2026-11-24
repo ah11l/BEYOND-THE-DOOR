@@ -675,14 +675,36 @@ func _build_settings_overlay() -> void:
 	var gfx_btn := Button.new()
 	gfx_btn.name = "GfxBtn"
 	gfx_btn.custom_minimum_size = Vector2(0, 48)
-	UIStyleHelper.style_button(gfx_btn)
+	UIStyleHelper.style_button(gfx_btn, UIStyleHelper.ACCENT_GOLD)
 	gfx_btn.pressed.connect(func() -> void:
-		var cur := str(SaveManager.get_setting("graphics_quality", "medium"))
-		var nxt := "high" if cur == "medium" else ("low" if cur == "high" else "medium")
+		var cur := str(SaveManager.get_setting("graphics_quality", "high"))
+		var nxt := UIStyleHelper.next_quality(cur)
 		SaveManager.set_setting("graphics_quality", nxt)
 		_refresh_labels()
 	)
 	vbox.add_child(gfx_btn)
+
+	var shad_btn := Button.new()
+	shad_btn.name = "ShadowsBtn"
+	shad_btn.custom_minimum_size = Vector2(0, 44)
+	UIStyleHelper.style_button(shad_btn)
+	shad_btn.pressed.connect(func() -> void:
+		var cur := bool(SaveManager.get_setting("shadows_enabled", true))
+		SaveManager.set_setting("shadows_enabled", not cur)
+		_refresh_labels()
+	)
+	vbox.add_child(shad_btn)
+
+	var bloom_btn := Button.new()
+	bloom_btn.name = "BloomBtn"
+	bloom_btn.custom_minimum_size = Vector2(0, 44)
+	UIStyleHelper.style_button(bloom_btn)
+	bloom_btn.pressed.connect(func() -> void:
+		var cur := bool(SaveManager.get_setting("bloom_enabled", true))
+		SaveManager.set_setting("bloom_enabled", not cur)
+		_refresh_labels()
+	)
+	vbox.add_child(bloom_btn)
 
 	var dev_btn := Button.new()
 	dev_btn.text = "إعداد وتطوير: majnon.studio (إنستغرام)"
@@ -885,7 +907,15 @@ func _refresh_labels() -> void:
 	_apply_meta_localization(_root)
 	var gfx_btn := _settings_overlay.find_child("GfxBtn", true, false) as Button
 	if gfx_btn != null:
-		gfx_btn.text = LocalizationManager.t("settings_graphics") + ": " + UIStyleHelper.quality_label_ar(str(SaveManager.get_setting("graphics_quality", "medium")))
+		gfx_btn.text = LocalizationManager.t("settings_graphics") + ": " + UIStyleHelper.quality_label_ar(str(SaveManager.get_setting("graphics_quality", "high")))
+	var sh_btn := _settings_overlay.find_child("ShadowsBtn", true, false) as Button
+	if sh_btn != null:
+		var sh_on := bool(SaveManager.get_setting("shadows_enabled", true))
+		sh_btn.text = LocalizationManager.t("settings_shadows") + ": " + LocalizationManager.t("state_on" if sh_on else "state_off")
+	var bl_btn := _settings_overlay.find_child("BloomBtn", true, false) as Button
+	if bl_btn != null:
+		var bl_on := bool(SaveManager.get_setting("bloom_enabled", true))
+		bl_btn.text = LocalizationManager.t("settings_bloom") + ": " + LocalizationManager.t("state_on" if bl_on else "state_off")
 	var diff_btn := _settings_overlay.find_child("DiffBtn", true, false) as Button
 	if diff_btn != null:
 		diff_btn.text = LocalizationManager.t("settings_difficulty") + ": " + LocalizationManager.t("diff_" + SaveManager.get_difficulty())

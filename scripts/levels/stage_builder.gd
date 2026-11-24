@@ -22,6 +22,8 @@ var _boss: GuardianBoss = null
 var _cinematic_director: CinematicDirector = null
 var _landmarks: WorldLandmarks = null
 var _suspense_director: StageSuspenseDirector = null
+var _world_env: WorldEnvironment = null
+var _sun_light: DirectionalLight3D = null
 
 var _golden_door: GoldenDoor = null
 var _purple_doors: Array[PurpleDoor] = []
@@ -88,6 +90,7 @@ func _ready() -> void:
 func _on_settings_changed() -> void:
 	if _conduit_root != null and is_instance_valid(_conduit_root):
 		_conduit_root.visible = bool(SaveManager.get_setting("puzzle_guides", true))
+	_apply_graphics_settings()
 
 
 func _setup_environment() -> void:
@@ -104,22 +107,27 @@ func _setup_environment() -> void:
 	env.fog_light_color = world_palette["fog"] as Color
 	env.fog_density = LowPolyMeshLibrary.get_world_fog_density(w_idx)
 	env.fog_sky_affect = 0.45
+	env.tonemap_mode = Environment.TONE_MAPPER_ACES
+	env.tonemap_exposure = 1.06
+	env.tonemap_white = 4.5
 	env.glow_enabled = true
-	env.glow_intensity = 0.34
-	env.glow_bloom = 0.12
+	env.glow_hdr_threshold = 0.92
+	env.glow_intensity = 0.52
+	env.glow_bloom = 0.22
 
-	var we := WorldEnvironment.new()
-	we.environment = env
-	add_child(we)
+	_world_env = WorldEnvironment.new()
+	_world_env.environment = env
+	add_child(_world_env)
 
-	var moon := DirectionalLight3D.new()
-	moon.light_color = world_palette["light"] as Color
-	moon.light_energy = 1.18
-	moon.rotation_degrees = Vector3(-42.0, 38.0, 0.0)
-	moon.shadow_enabled = (str(SaveManager.get_setting("graphics_quality", "medium")) != "low")
-	moon.shadow_blur = 2.2
-	moon.directional_shadow_max_distance = 52.0
-	add_child(moon)
+	_sun_light = DirectionalLight3D.new()
+	_sun_light.light_color = world_palette["light"] as Color
+	_sun_light.light_energy = 1.24
+	_sun_light.rotation_degrees = Vector3(-44.0, 36.0, 0.0)
+	_sun_light.shadow_bias = 0.04
+	_sun_light.shadow_normal_bias = 1.2
+	_sun_light.directional_shadow_max_distance = 56.0
+	add_child(_sun_light)
+	_apply_graphics_settings()
 
 	var rose_fill := DirectionalLight3D.new()
 	rose_fill.light_color = world_palette.get("fill_warm", Color(0.76, 0.52, 0.58)) as Color
@@ -963,3 +971,52 @@ func _trigger_stage_cinematic_if_any() -> void:
 	var intro_hint: String = str(stage_def.get("hint_key", ""))
 	if not intro_hint.is_empty():
 		_hud.show_toast(intro_hint, 4.5)
+
+
+func _apply_graphics_settings() -> void:
+	var q: String = str(SaveManager.get_setting("graphics_quality", "high"))
+	var shadows_on: bool = bool(SaveManager.get_setting("shadows_enabled", true)) and q != "low"
+	var bloom_on: bool = bool(SaveManager.get_setting("bloom_enabled", true)) and q != "low"
+
+	if _sun_light != null and is_instance_valid(_sun_light):
+		_sun_light.shadow_enabled = shadows_on
+		match q:
+			"ultra":
+				_sun_light.shadow_blur = 3.0
+			"high":
+				_sun_light.shadow_blur = 2.2
+			_:
+				_sun_light.shadow_blur = 1.4
+
+	if _world_env != null and is_instance_valid(_world_env) and _world_env.environment != null:
+		var e: Environment = _world_env.environment
+		e.glow_enabled = bloom_on
+		match q:
+			"ultra":
+				e.glow_intensity = 0.72
+				e.glow_bloom = 0.32
+				e.glow_hdr_threshold = 0.85
+			"high":
+				e.glow_intensity = 0.52
+				e.glow_bloom = 0.22
+				e.glow_hdr_threshold = 0.92
+			_:
+				e.glow_intensity = 0.30
+				e.glow_bloom = 0.10
+				e.glow_hdr_threshold = 1.0
+
+	var vp: Viewport = get_viewport()
+	if vp != null:
+		match q:
+			"low":
+				vp.msaa_3d = Viewport.MSAA_DISABLED
+				vp.scaling_3d_scale = 0.80
+			"medium":
+				vp.msaa_3d = Viewport.MSAA_2X
+				vp.scaling_3d_scale = 0.90
+			"high":
+				vp.msaa_3d = Viewport.MSAA_2X
+				vp.scaling_3d_scale = 1.0
+			"ultra":
+				vp.msaa_3d = Viewport.MSAA_4X
+				vp.scaling_3d_scale = 1.0
