@@ -1,100 +1,152 @@
 class_name LowPolyMeshLibrary
 extends RefCounted
 
-## Reference-aligned procedural low-poly 3D mesh & material library:
-## - Restrained cosmic palettes (deep navy, muted indigo, dark natural greens, subdued turquoise)
-## - Multi-tiered faceted floating islands with mossy grass ledges & rocky undersides
-## - Layered stylized trees (with layer-32 camera occlusion fade), wooden cabins, glowing waterfalls,
-##   ancient stone arches, crystal clusters, Guardian Boss Sentinels, and the approved hooded protagonist.
+## V26 6-World Procedural Low-Poly 3D Mesh & Painted Material Library:
+## - 6 distinct cohesive world palettes, seamless painted ground & cliff textures, and tree silhouettes:
+##   1. الجزر المنسية (Emerald blossom trees + slate flagstones)
+##   2. غابة الهمس (Deep pine trees + hanging lanterns + bioluminescent mushrooms)
+##   3. مدينة الساعات المتوقفة (Olive cypress trees + bronze-inlaid clockwork stone)
+##   4. الهاوية الصامتة (Twisted abyssal cypress + glowing teal cracks & crystal buds)
+##   5. بحر المرايا (Teal-emerald crystal trees + rose blossoms + reflective indigo-silver tiles)
+##   6. ما وراء الباب (Sanctuary emerald trees + golden lanterns + ivory-gold marble)
+## - Carved glowing rune pushable block material, layer-32 camera occlusion fade, and hooded protagonist.
 
 const WORLD_PALETTES := {
 	1: { # الجزر المنسية — The Forgotten Islands
 		"name_key": "world_1_name",
-		"top": Color(0.28, 0.34, 0.42),
-		"grass": Color(0.20, 0.38, 0.34),
-		"side": Color(0.20, 0.18, 0.30),
-		"accent": Color(0.56, 0.24, 0.48), # Restrained plum-magenta canopy
-		"accent_alt": Color(0.22, 0.38, 0.56), # Muted indigo canopy
-		"sky_top": Color(0.03, 0.04, 0.11),
-		"sky_horizon": Color(0.14, 0.10, 0.24),
-		"fog": Color(0.10, 0.09, 0.20),
-		"light": Color(0.86, 0.86, 0.96),
+		"top": Color(0.88, 0.94, 0.92),
+		"grass": Color(0.18, 0.46, 0.32),
+		"side": Color(0.84, 0.84, 0.94),
+		"accent": Color(0.16, 0.46, 0.30),      # Natural emerald canopy
+		"accent_alt": Color(0.12, 0.36, 0.28),  # Deep forest pine
+		"blossom": Color(0.94, 0.58, 0.74),     # Subtle pink blossom highlights
+		"rune_glow": Color(0.32, 0.88, 1.0),
+		"sky_top": Color(0.03, 0.05, 0.12),
+		"sky_horizon": Color(0.12, 0.14, 0.28),
+		"fog": Color(0.09, 0.11, 0.22),
+		"light": Color(0.88, 0.90, 0.98),
+		"fill_warm": Color(0.82, 0.62, 0.54),
+		"rim_cool": Color(0.28, 0.72, 0.92),
+		"metallic": 0.04,
+		"roughness": 0.86,
 	},
 	2: { # غابة الهمس — The Whispering Forest
 		"name_key": "world_2_name",
-		"top": Color(0.22, 0.34, 0.38),
-		"grass": Color(0.16, 0.36, 0.30),
-		"side": Color(0.14, 0.20, 0.30),
-		"accent": Color(0.20, 0.52, 0.62), # Subdued turquoise-pine
-		"accent_alt": Color(0.18, 0.38, 0.34),
-		"sky_top": Color(0.02, 0.05, 0.12),
-		"sky_horizon": Color(0.09, 0.18, 0.28),
-		"fog": Color(0.08, 0.14, 0.24),
-		"light": Color(0.72, 0.88, 0.96),
+		"top": Color(0.84, 0.96, 0.90),
+		"grass": Color(0.14, 0.44, 0.32),
+		"side": Color(0.78, 0.90, 0.88),
+		"accent": Color(0.11, 0.40, 0.28),      # Deep whispering pine
+		"accent_alt": Color(0.10, 0.34, 0.32),  # Mossy emerald-teal
+		"blossom": Color(0.42, 0.96, 0.86),     # Bioluminescent mist glow
+		"rune_glow": Color(0.34, 0.96, 0.84),
+		"sky_top": Color(0.02, 0.06, 0.10),
+		"sky_horizon": Color(0.07, 0.22, 0.24),
+		"fog": Color(0.06, 0.18, 0.20),
+		"light": Color(0.76, 0.94, 0.92),
+		"fill_warm": Color(0.96, 0.78, 0.44),
+		"rim_cool": Color(0.24, 0.88, 0.80),
+		"metallic": 0.04,
+		"roughness": 0.88,
 	},
 	3: { # مدينة الساعات المتوقفة — City of Stopped Clocks
 		"name_key": "world_3_name",
-		"top": Color(0.34, 0.28, 0.44),
-		"grass": Color(0.24, 0.26, 0.38),
-		"side": Color(0.20, 0.14, 0.28),
-		"accent": Color(0.52, 0.32, 0.64), # Muted twilight violet
-		"accent_alt": Color(0.68, 0.54, 0.34), # Antique bronze-gold
-		"sky_top": Color(0.05, 0.03, 0.12),
-		"sky_horizon": Color(0.20, 0.11, 0.28),
-		"fog": Color(0.14, 0.09, 0.22),
-		"light": Color(0.86, 0.78, 0.94),
+		"top": Color(0.92, 0.88, 0.94),
+		"grass": Color(0.24, 0.40, 0.26),
+		"side": Color(0.88, 0.82, 0.88),
+		"accent": Color(0.24, 0.42, 0.25),      # Olive-cypress green
+		"accent_alt": Color(0.18, 0.34, 0.24),  # Deep cypress
+		"blossom": Color(0.94, 0.74, 0.36),     # Antique bronze-gold trim
+		"rune_glow": Color(0.98, 0.76, 0.34),
+		"sky_top": Color(0.06, 0.04, 0.12),
+		"sky_horizon": Color(0.24, 0.15, 0.22),
+		"fog": Color(0.18, 0.12, 0.19),
+		"light": Color(0.96, 0.86, 0.74),
+		"fill_warm": Color(0.95, 0.68, 0.36),
+		"rim_cool": Color(0.56, 0.44, 0.82),
+		"metallic": 0.12,
+		"roughness": 0.78,
 	},
 	4: { # الهاوية الصامتة — The Silent Abyss
 		"name_key": "world_4_name",
-		"top": Color(0.24, 0.27, 0.36),
-		"grass": Color(0.16, 0.28, 0.32),
-		"side": Color(0.11, 0.13, 0.21),
-		"accent": Color(0.26, 0.48, 0.52), # Deep mist teal
-		"accent_alt": Color(0.28, 0.32, 0.48),
-		"sky_top": Color(0.018, 0.024, 0.06),
-		"sky_horizon": Color(0.09, 0.11, 0.19),
-		"fog": Color(0.07, 0.09, 0.16),
-		"light": Color(0.72, 0.80, 0.90),
+		"top": Color(0.82, 0.92, 0.96),
+		"grass": Color(0.10, 0.32, 0.36),
+		"side": Color(0.74, 0.84, 0.92),
+		"accent": Color(0.09, 0.26, 0.32),      # Dark blue-green abyssal cypress
+		"accent_alt": Color(0.07, 0.20, 0.28),  # Deep obsidian pine
+		"blossom": Color(0.76, 0.64, 0.98),     # Pale violet-pink crystal buds
+		"rune_glow": Color(0.24, 0.92, 0.96),
+		"sky_top": Color(0.015, 0.035, 0.06),
+		"sky_horizon": Color(0.05, 0.16, 0.22),
+		"fog": Color(0.04, 0.14, 0.19),
+		"light": Color(0.68, 0.88, 0.94),
+		"fill_warm": Color(0.46, 0.38, 0.68),
+		"rim_cool": Color(0.18, 0.84, 0.92),
+		"metallic": 0.10,
+		"roughness": 0.80,
 	},
 	5: { # بحر المرايا — Sea of Mirrors
 		"name_key": "world_5_name",
-		"top": Color(0.34, 0.28, 0.42),
-		"grass": Color(0.24, 0.32, 0.40),
-		"side": Color(0.18, 0.14, 0.28),
-		"accent": Color(0.66, 0.38, 0.44), # Muted rose-amber
-		"accent_alt": Color(0.32, 0.48, 0.66),
-		"sky_top": Color(0.04, 0.03, 0.10),
-		"sky_horizon": Color(0.22, 0.13, 0.24),
-		"fog": Color(0.14, 0.10, 0.20),
-		"light": Color(0.92, 0.82, 0.86),
+		"top": Color(0.92, 0.94, 1.0),
+		"grass": Color(0.14, 0.42, 0.40),
+		"side": Color(0.88, 0.92, 1.0),
+		"accent": Color(0.12, 0.44, 0.38),      # Deep teal-emerald canopy
+		"accent_alt": Color(0.16, 0.48, 0.46),  # Silver-teal
+		"blossom": Color(0.96, 0.64, 0.76),     # Delicate rose-pink blossoms
+		"rune_glow": Color(0.72, 0.78, 1.0),
+		"sky_top": Color(0.05, 0.04, 0.14),
+		"sky_horizon": Color(0.22, 0.16, 0.36),
+		"fog": Color(0.16, 0.13, 0.28),
+		"light": Color(0.90, 0.92, 1.0),
+		"fill_warm": Color(0.84, 0.64, 0.88),
+		"rim_cool": Color(0.54, 0.82, 1.0),
+		"metallic": 0.32,
+		"roughness": 0.34,
 	},
 	6: { # ما وراء الباب — Beyond the Door
 		"name_key": "world_6_name",
-		"top": Color(0.30, 0.30, 0.46),
-		"grass": Color(0.22, 0.36, 0.42),
-		"side": Color(0.15, 0.15, 0.28),
-		"accent": Color(0.78, 0.62, 0.32), # Astral antique gold
-		"accent_alt": Color(0.28, 0.52, 0.66),
-		"sky_top": Color(0.022, 0.032, 0.10),
-		"sky_horizon": Color(0.18, 0.15, 0.32),
-		"fog": Color(0.12, 0.11, 0.24),
-		"light": Color(0.96, 0.88, 0.76),
+		"top": Color(1.0, 0.97, 0.92),
+		"grass": Color(0.14, 0.44, 0.28),
+		"side": Color(0.96, 0.90, 0.82),
+		"accent": Color(0.12, 0.42, 0.26),      # Majestic sanctuary emerald
+		"accent_alt": Color(0.16, 0.48, 0.30),  # Sunlit emerald
+		"blossom": Color(0.98, 0.74, 0.56),     # Warm golden-pink sanctuary blossoms
+		"rune_glow": Color(1.0, 0.82, 0.36),
+		"sky_top": Color(0.05, 0.04, 0.11),
+		"sky_horizon": Color(0.46, 0.28, 0.12),
+		"fog": Color(0.28, 0.19, 0.12),
+		"light": Color(1.0, 0.90, 0.72),
+		"fill_warm": Color(1.0, 0.74, 0.34),
+		"rim_cool": Color(0.48, 0.72, 0.96),
+		"metallic": 0.14,
+		"roughness": 0.62,
 	},
 }
-
-
 
 const TEX_ISLAND_TOP := "res://assets/textures/island_top.png"
 const TEX_CLIFF_ROCK := "res://assets/textures/cliff_rock.png"
 const TEX_WOOD_PLANKS := "res://assets/textures/wood_planks.png"
 const TEX_COSMIC_SKY := "res://assets/textures/cosmic_sky.png"
+const TEX_RUNE_BLOCK_ALBEDO := "res://assets/textures/rune_block_albedo.png"
+const TEX_RUNE_BLOCK_EMISSION := "res://assets/textures/rune_block_emission.png"
 
 
-static func make_textured_material(tex_path: String, tint: Color = Color.WHITE, roughness: float = 0.84, uv_scale: Vector3 = Vector3(1.0, 1.0, 1.0), triplanar: bool = true) -> StandardMaterial3D:
+static func get_world_top_texture_path(world_index: int) -> String:
+	var w := clampi(world_index, 1, 6)
+	var candidate := "res://assets/textures/world_%d_top.png" % w
+	return candidate if ResourceLoader.exists(candidate) else TEX_ISLAND_TOP
+
+
+static func get_world_cliff_texture_path(world_index: int) -> String:
+	var w := clampi(world_index, 1, 6)
+	var candidate := "res://assets/textures/world_%d_cliff.png" % w
+	return candidate if ResourceLoader.exists(candidate) else TEX_CLIFF_ROCK
+
+
+static func make_textured_material(tex_path: String, tint: Color = Color.WHITE, roughness: float = 0.84, uv_scale: Vector3 = Vector3(1.0, 1.0, 1.0), triplanar: bool = true, metallic: float = 0.04) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = tint
 	mat.roughness = roughness
-	mat.metallic = 0.04
+	mat.metallic = metallic
 	var tex := load(tex_path) as Texture2D
 	if tex != null:
 		mat.albedo_texture = tex
@@ -103,8 +155,53 @@ static func make_textured_material(tex_path: String, tint: Color = Color.WHITE, 
 	return mat
 
 
-static func build_cosmic_sky() -> Sky:
+static func make_rune_block_material(world_index: int = 1) -> StandardMaterial3D:
+	var pal := get_world_palette(world_index)
+	var rune_col: Color = pal.get("rune_glow", Color(0.32, 0.88, 1.0))
+	var mat := StandardMaterial3D.new()
+	if world_index == 6:
+		mat.albedo_color = Color(0.95, 0.90, 0.82)
+		mat.roughness = 0.55
+		mat.metallic = 0.18
+	elif world_index == 5:
+		mat.albedo_color = Color(0.74, 0.80, 0.98)
+		mat.roughness = 0.32
+		mat.metallic = 0.34
+	elif world_index == 4:
+		mat.albedo_color = Color(0.42, 0.48, 0.56)
+		mat.roughness = 0.72
+		mat.metallic = 0.12
+	else:
+		mat.albedo_color = Color(0.76, 0.78, 0.88)
+		mat.roughness = 0.74
+		mat.metallic = 0.10
+
+	var alb := load(TEX_RUNE_BLOCK_ALBEDO) as Texture2D
+	if alb != null:
+		mat.albedo_texture = alb
+	var em := load(TEX_RUNE_BLOCK_EMISSION) as Texture2D
+	if em != null:
+		mat.emission_enabled = true
+		mat.emission = rune_col
+		mat.emission_texture = em
+		mat.emission_energy_multiplier = 1.65
+	return mat
+
+
+static func build_cosmic_sky(world_index: int = 1) -> Sky:
+	var pal := get_world_palette(world_index)
 	var sky := Sky.new()
+	if world_index == 6:
+		# World 6: Dawn-gold breaking over deep starry sky
+		var psm := ProceduralSkyMaterial.new()
+		psm.sky_top_color = pal.get("sky_top", Color(0.05, 0.04, 0.11))
+		psm.sky_horizon_color = Color(0.72, 0.44, 0.16)
+		psm.ground_bottom_color = Color(0.08, 0.06, 0.12)
+		psm.ground_horizon_color = Color(0.54, 0.32, 0.14)
+		psm.sun_angle_max = 36.0
+		psm.sun_curve = 0.18
+		sky.sky_material = psm
+		return sky
 	var pmat := PanoramaSkyMaterial.new()
 	var tex := load(TEX_COSMIC_SKY) as Texture2D
 	if tex != null:
@@ -130,10 +227,11 @@ static func make_flat_material(color: Color, roughness: float = 0.82, emission: 
 	return mat
 
 
-static func create_floating_island_mesh(size: Vector3, top_color: Color, side_color: Color, seed_val: int = 1, grass_color: Color = Color(0.20, 0.38, 0.34)) -> ArrayMesh:
-	## 2-Surface Painted Floating Island:
-	## Surface 0: Hand-painted mossy grass & stone flagstones (island_top.png) with planar UVs
-	## Surface 1: Hand-painted faceted purple-slate cliff rock (cliff_rock.png) with triplanar mapping
+static func create_floating_island_mesh(size: Vector3, top_color: Color, side_color: Color, seed_val: int = 1, grass_color: Color = Color(0.20, 0.38, 0.34), world_index: int = 1) -> ArrayMesh:
+	## 2-Surface World-Themed Painted Floating Island:
+	## Surface 0: World-specific seamless hand-painted top surface (world_X_top.png)
+	## Surface 1: World-specific faceted cliff rock & tapered underside (world_X_cliff.png)
+	var pal := get_world_palette(world_index)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_val
 
@@ -155,7 +253,7 @@ static func create_floating_island_mesh(size: Vector3, top_color: Color, side_co
 			var v := float(iz) / float(sub_z)
 			var z := lerpf(-hz, hz, v)
 			var is_edge := (ix == 0 or ix == sub_x or iz == 0 or iz == sub_z)
-			var y_jitter := 0.0 if is_edge else rng.randf_range(-0.02, 0.02)
+			var y_jitter := 0.0 if is_edge else rng.randf_range(-0.018, 0.018)
 			col.append(Vector3(x, y_jitter, z))
 		grid.append(col)
 
@@ -169,8 +267,17 @@ static func create_floating_island_mesh(size: Vector3, top_color: Color, side_co
 			_add_flat_tri(st_top, p00, p11, p01, Color.WHITE)
 
 	var mesh := st_top.commit()
-	var top_tint := Color.WHITE.lerp(top_color.lightened(0.28), 0.35)
-	mesh.surface_set_material(0, make_textured_material(TEX_ISLAND_TOP, top_tint, 0.86, Vector3(0.22, 0.22, 0.22), true))
+	var top_tex := get_world_top_texture_path(world_index)
+	var top_rough := float(pal.get("roughness", 0.84))
+	var top_metal := float(pal.get("metallic", 0.04))
+	var top_tint := Color.WHITE.lerp(top_color, 0.30)
+	var top_mat := make_textured_material(top_tex, top_tint, top_rough, Vector3(0.24, 0.24, 0.24), true, top_metal)
+	if world_index == 4:
+		# Subtle abyssal glow boost on cracks
+		top_mat.emission_enabled = true
+		top_mat.emission = Color(0.06, 0.28, 0.30)
+		top_mat.emission_energy_multiplier = 0.22
+	mesh.surface_set_material(0, top_mat)
 
 	# Surface 1: Faceted Cliff Rock Sides & Tapered Underside
 	var st_cliff := SurfaceTool.new()
@@ -179,15 +286,14 @@ static func create_floating_island_mesh(size: Vector3, top_color: Color, side_co
 	var mid_y := -thickness * 0.58
 	var bottom_tip := Vector3(rng.randf_range(-hx * 0.18, hx * 0.18), -thickness * 1.62, rng.randf_range(-hz * 0.18, hz * 0.18))
 
-	var top_ring := [
+	var top_ring: Array[Vector3] = [
 		Vector3(-hx, 0.0, -hz), Vector3(0.0, 0.0, -hz), Vector3(hx, 0.0, -hz),
 		Vector3(hx, 0.0, 0.0), Vector3(hx, 0.0, hz), Vector3(0.0, 0.0, hz),
 		Vector3(-hx, 0.0, hz), Vector3(-hx, 0.0, 0.0),
 	]
 	var lip_ring: Array[Vector3] = []
 	var mid_ring: Array[Vector3] = []
-	for pt in top_ring:
-		var p3 := pt as Vector3
+	for p3: Vector3 in top_ring:
 		var j_lip := rng.randf_range(0.95, 1.03)
 		var j_mid := rng.randf_range(0.76, 0.90)
 		lip_ring.append(Vector3(p3.x * j_lip, lip_y + rng.randf_range(-0.05, 0.04), p3.z * j_lip))
@@ -203,8 +309,9 @@ static func create_floating_island_mesh(size: Vector3, top_color: Color, side_co
 		_add_flat_tri(st_cliff, mid_ring[i], bottom_tip, mid_ring[ni], Color.WHITE)
 
 	st_cliff.commit(mesh)
-	var cliff_tint := Color.WHITE.lerp(side_color.lightened(0.35), 0.35)
-	mesh.surface_set_material(1, make_textured_material(TEX_CLIFF_ROCK, cliff_tint, 0.90, Vector3(0.28, 0.28, 0.28), true))
+	var cliff_tex := get_world_cliff_texture_path(world_index)
+	var cliff_tint := Color.WHITE.lerp(side_color, 0.30)
+	mesh.surface_set_material(1, make_textured_material(cliff_tex, cliff_tint, 0.88, Vector3(0.28, 0.28, 0.28), true, top_metal * 0.5))
 	return mesh
 
 
@@ -223,58 +330,119 @@ static func _add_flat_tri(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, c
 	st.add_vertex(c)
 
 
-static func create_low_poly_tree(crown_color: Color, scale_factor: float = 1.0, pine_style: bool = false) -> Node3D:
-	## Rich layered canopy or tiered pine tree matching 254211.png silhouette,
-	## with an invisible layer-32 occluder so the dynamic camera fades it if blocking the player.
+static func create_low_poly_tree(crown_color: Color, scale_factor: float = 1.0, pine_style: bool = false, world_index: int = 1) -> Node3D:
+	## 6 World-Distinct Stylized Low-Poly Trees (natural emerald/pine/olive/abyssal/teal foliage
+	## with subtle world-themed blossom, lantern, mushroom, or crystal accents — no pink blobs!).
 	var root := Node3D.new()
-	root.name = "LowPolyTree"
+	root.name = "LowPolyTree_W%d" % world_index
+	var pal := get_world_palette(world_index)
+	var accent_col: Color = pal.get("blossom", Color(0.94, 0.58, 0.74))
+	var glow_col: Color = pal.get("rune_glow", Color(0.32, 0.88, 1.0))
 
+	# Shared sculptural trunk
 	var trunk := MeshInstance3D.new()
 	var trunk_mesh := CylinderMesh.new()
-	trunk_mesh.top_radius = 0.11 * scale_factor
-	trunk_mesh.bottom_radius = 0.22 * scale_factor
+	trunk_mesh.top_radius = 0.09 * scale_factor
+	trunk_mesh.bottom_radius = 0.20 * scale_factor
 	trunk_mesh.height = 1.55 * scale_factor
 	trunk_mesh.radial_segments = 6
 	trunk.mesh = trunk_mesh
 	trunk.position = Vector3(0.0, 0.77 * scale_factor, 0.0)
-	trunk.material_override = make_flat_material(Color(0.24, 0.16, 0.20), 0.92)
+	var bark_col := Color(0.26, 0.18, 0.14) if world_index != 4 else Color(0.14, 0.15, 0.20)
+	trunk.material_override = make_flat_material(bark_col, 0.92)
 	root.add_child(trunk)
 
-	if pine_style:
-		var tiers := [
-			{"y": 1.15, "r": 0.92, "h": 1.05, "c": crown_color.darkened(0.14)},
-			{"y": 1.85, "r": 0.72, "h": 0.95, "c": crown_color},
-			{"y": 2.45, "r": 0.48, "h": 0.85, "c": crown_color.lightened(0.08)},
-		]
-		for t in tiers:
-			var cone := MeshInstance3D.new()
-			var cm := CylinderMesh.new()
-			cm.top_radius = 0.02 * scale_factor
-			cm.bottom_radius = float(t["r"]) * scale_factor
-			cm.height = float(t["h"]) * scale_factor
-			cm.radial_segments = 7
-			cone.mesh = cm
-			cone.position = Vector3(0.0, float(t["y"]) * scale_factor, 0.0)
-			cone.material_override = make_flat_material(t["c"] as Color, 0.84)
-			root.add_child(cone)
-	else:
-		var puffs := [
-			{"pos": Vector3(0.0, 1.95, 0.0), "r": 0.96, "h": 0.72, "c": crown_color},
-			{"pos": Vector3(-0.68, 1.62, 0.26), "r": 0.66, "h": 0.56, "c": crown_color.darkened(0.12)},
-			{"pos": Vector3(0.64, 1.68, -0.20), "r": 0.62, "h": 0.52, "c": crown_color.lightened(0.08)},
-			{"pos": Vector3(0.10, 2.38, 0.08), "r": 0.58, "h": 0.44, "c": crown_color.lightened(0.12)},
-		]
-		for p in puffs:
-			var crown := MeshInstance3D.new()
-			var sphere := SphereMesh.new()
-			sphere.radius = float(p["r"]) * scale_factor
-			sphere.height = float(p["h"]) * 2.0 * scale_factor
-			sphere.radial_segments = 7
-			sphere.rings = 3
-			crown.mesh = sphere
-			crown.position = (p["pos"] as Vector3) * scale_factor
-			crown.material_override = make_flat_material(p["c"] as Color, 0.82)
-			root.add_child(crown)
+	match clampi(world_index, 1, 6):
+		1:
+			# World 1: Layered natural emerald canopy + subtle pink blossom clusters
+			if pine_style:
+				_add_cone_tiers(root, crown_color, scale_factor, [
+					{"y": 1.20, "r": 0.86, "h": 0.98, "d": -0.10},
+					{"y": 1.85, "r": 0.66, "h": 0.90, "d": 0.0},
+					{"y": 2.42, "r": 0.44, "h": 0.78, "d": 0.08},
+				])
+			else:
+				_add_faceted_canopy(root, crown_color, scale_factor)
+			_add_blossom_dots(root, accent_col, scale_factor, [
+				Vector3(-0.56, 1.86, 0.34), Vector3(0.52, 1.98, 0.22),
+				Vector3(0.12, 2.48, -0.24), Vector3(-0.22, 1.66, -0.46),
+			], 0.11, false)
+		2:
+			# World 2: Deep whispering pine + hanging warm mini-lantern + glowing forest mushrooms
+			_add_cone_tiers(root, crown_color, scale_factor, [
+				{"y": 1.18, "r": 0.96, "h": 1.04, "d": -0.12},
+				{"y": 1.86, "r": 0.74, "h": 0.94, "d": 0.0},
+				{"y": 2.48, "r": 0.50, "h": 0.84, "d": 0.08},
+				{"y": 2.98, "r": 0.28, "h": 0.64, "d": 0.14},
+			])
+			_add_hanging_mini_lantern(root, Vector3(0.56, 1.24, 0.26) * scale_factor, Color(1.0, 0.80, 0.38), scale_factor)
+			_add_blossom_dots(root, glow_col, scale_factor, [
+				Vector3(-0.34, 0.14, 0.28), Vector3(-0.18, 0.10, 0.38), Vector3(0.28, 0.12, -0.24),
+			], 0.09, true)
+		3:
+			# World 3: Tall slender olive-green cypress spire + subtle antique bronze base ring
+			_add_cone_tiers(root, crown_color, scale_factor, [
+				{"y": 1.22, "r": 0.64, "h": 1.15, "d": -0.10},
+				{"y": 1.98, "r": 0.50, "h": 1.10, "d": 0.0},
+				{"y": 2.68, "r": 0.34, "h": 1.00, "d": 0.08},
+				{"y": 3.28, "r": 0.18, "h": 0.78, "d": 0.14},
+			])
+			var ring := MeshInstance3D.new()
+			var tor := TorusMesh.new()
+			tor.inner_radius = 0.24 * scale_factor
+			tor.outer_radius = 0.32 * scale_factor
+			tor.rings = 10
+			tor.ring_segments = 5
+			ring.mesh = tor
+			ring.position = Vector3(0.0, 0.10 * scale_factor, 0.0)
+			ring.material_override = make_flat_material(accent_col, 0.45, accent_col, 0.35)
+			root.add_child(ring)
+		4:
+			# World 4: Twisted dark blue-green abyssal cypress + violet-pink glowing crystal buds
+			var offsets: Array[Vector3] = [
+				Vector3(0.0, 1.18, 0.0), Vector3(0.08, 1.76, -0.05),
+				Vector3(-0.07, 2.30, 0.06), Vector3(0.04, 2.82, -0.03),
+			]
+			var radii := [0.74, 0.56, 0.40, 0.24]
+			for i in range(4):
+				var cone := MeshInstance3D.new()
+				var cm := CylinderMesh.new()
+				cm.top_radius = 0.04 * scale_factor
+				cm.bottom_radius = float(radii[i]) * scale_factor
+				cm.height = 0.92 * scale_factor
+				cm.radial_segments = 6
+				cone.mesh = cm
+				cone.position = offsets[i] * scale_factor
+				cone.rotation_degrees = Vector3(float(i % 2) * 5.0 - 2.5, float(i) * 32.0, float((i + 1) % 2) * 5.0 - 2.5)
+				cone.material_override = make_flat_material(crown_color.lightened(float(i) * 0.04), 0.78)
+				root.add_child(cone)
+			_add_blossom_dots(root, accent_col, scale_factor, [
+				Vector3(-0.46, 1.48, 0.22), Vector3(0.42, 1.98, 0.18),
+				Vector3(-0.26, 2.48, -0.18), Vector3(0.24, 1.05, 0.28),
+			], 0.095, true)
+		5:
+			# World 5: Elegant tiered teal-emerald crystal tree + rose-pink blossoms & floating prisms
+			_add_cone_tiers(root, crown_color, scale_factor, [
+				{"y": 1.24, "r": 0.88, "h": 0.82, "d": -0.08},
+				{"y": 1.88, "r": 0.68, "h": 0.76, "d": 0.02},
+				{"y": 2.46, "r": 0.46, "h": 0.68, "d": 0.10},
+			])
+			_add_blossom_dots(root, accent_col, scale_factor, [
+				Vector3(-0.58, 1.38, 0.30), Vector3(0.54, 1.46, -0.20),
+				Vector3(-0.34, 2.04, 0.28), Vector3(0.36, 2.10, 0.22),
+			], 0.11, false)
+			_add_blossom_dots(root, glow_col, scale_factor, [
+				Vector3(-0.72, 0.96, 0.44), Vector3(0.68, 1.12, 0.36),
+			], 0.075, true)
+		6:
+			# World 6: Majestic sanctuary emerald canopy + warm golden-pink blossoms + 2 hanging golden lanterns
+			_add_faceted_canopy(root, crown_color, scale_factor)
+			_add_blossom_dots(root, accent_col, scale_factor, [
+				Vector3(-0.56, 1.90, 0.34), Vector3(0.54, 1.96, 0.24),
+				Vector3(0.08, 2.50, -0.22), Vector3(-0.32, 2.26, -0.34),
+			], 0.105, true)
+			_add_hanging_mini_lantern(root, Vector3(-0.54, 1.26, 0.32) * scale_factor, Color(1.0, 0.84, 0.40), scale_factor)
+			_add_hanging_mini_lantern(root, Vector3(0.50, 1.30, -0.22) * scale_factor, Color(1.0, 0.84, 0.40), scale_factor)
 
 	# Camera-only occluder on layer 32 (zero physical collision with player!)
 	var occ := StaticBody3D.new()
@@ -282,7 +450,7 @@ static func create_low_poly_tree(crown_color: Color, scale_factor: float = 1.0, 
 	occ.collision_mask = 0
 	var occ_sh := CollisionShape3D.new()
 	var cyl := CylinderShape3D.new()
-	cyl.radius = 0.85 * scale_factor
+	cyl.radius = 0.82 * scale_factor
 	cyl.height = 2.6 * scale_factor
 	occ_sh.shape = cyl
 	occ_sh.position = Vector3(0.0, 1.4 * scale_factor, 0.0)
@@ -292,8 +460,79 @@ static func create_low_poly_tree(crown_color: Color, scale_factor: float = 1.0, 
 	return root
 
 
+static func _add_faceted_canopy(root: Node3D, crown_color: Color, scale_factor: float) -> void:
+	var puffs := [
+		{"pos": Vector3(0.0, 1.96, 0.0), "r": 0.92, "h": 0.68, "c": crown_color},
+		{"pos": Vector3(-0.64, 1.64, 0.24), "r": 0.62, "h": 0.52, "c": crown_color.darkened(0.12)},
+		{"pos": Vector3(0.60, 1.70, -0.20), "r": 0.58, "h": 0.48, "c": crown_color.lightened(0.08)},
+		{"pos": Vector3(0.08, 2.40, 0.06), "r": 0.54, "h": 0.42, "c": crown_color.lightened(0.12)},
+	]
+	for p in puffs:
+		var crown := MeshInstance3D.new()
+		var sphere := SphereMesh.new()
+		sphere.radius = float(p["r"]) * scale_factor
+		sphere.height = float(p["h"]) * 2.0 * scale_factor
+		sphere.radial_segments = 6
+		sphere.rings = 3
+		crown.mesh = sphere
+		crown.position = (p["pos"] as Vector3) * scale_factor
+		crown.material_override = make_flat_material(p["c"] as Color, 0.84)
+		root.add_child(crown)
+
+
+static func _add_cone_tiers(root: Node3D, crown_color: Color, scale_factor: float, tiers: Array) -> void:
+	for t in tiers:
+		var cone := MeshInstance3D.new()
+		var cm := CylinderMesh.new()
+		cm.top_radius = 0.02 * scale_factor
+		cm.bottom_radius = float(t["r"]) * scale_factor
+		cm.height = float(t["h"]) * scale_factor
+		cm.radial_segments = 7
+		cone.mesh = cm
+		cone.position = Vector3(0.0, float(t["y"]) * scale_factor, 0.0)
+		var d := float(t["d"])
+		var col := crown_color.lightened(d) if d >= 0.0 else crown_color.darkened(-d)
+		cone.material_override = make_flat_material(col, 0.84)
+		root.add_child(cone)
+
+
+static func _add_blossom_dots(root: Node3D, col: Color, scale_factor: float, positions: Array[Vector3], radius: float, glowing: bool) -> void:
+	var mat := make_flat_material(col, 0.35, col, 1.25 if glowing else 0.25)
+	var sph := SphereMesh.new()
+	sph.radius = radius * scale_factor
+	sph.height = radius * 2.0 * scale_factor
+	sph.radial_segments = 5
+	sph.rings = 2
+	for pt: Vector3 in positions:
+		var m := MeshInstance3D.new()
+		m.mesh = sph
+		m.position = pt * scale_factor
+		m.material_override = mat
+		root.add_child(m)
+
+
+static func _add_hanging_mini_lantern(root: Node3D, pos: Vector3, glow_col: Color, scale_factor: float) -> void:
+	var cord := MeshInstance3D.new()
+	var c_cyl := CylinderMesh.new()
+	c_cyl.top_radius = 0.012 * scale_factor
+	c_cyl.bottom_radius = 0.012 * scale_factor
+	c_cyl.height = 0.28 * scale_factor
+	c_cyl.radial_segments = 4
+	cord.mesh = c_cyl
+	cord.position = pos + Vector3(0.0, 0.14 * scale_factor, 0.0)
+	cord.material_override = make_flat_material(Color(0.18, 0.15, 0.20), 0.9)
+	root.add_child(cord)
+
+	var orb := MeshInstance3D.new()
+	var b := BoxMesh.new()
+	b.size = Vector3(0.13, 0.18, 0.13) * scale_factor
+	orb.mesh = b
+	orb.position = pos
+	orb.material_override = make_flat_material(glow_col, 0.15, glow_col, 2.0)
+	root.add_child(orb)
+
+
 static func create_wooden_cabin(scale_factor: float = 1.0) -> Node3D:
-	## Dark-timber atmospheric cabin matching 254211.png landmarks.
 	var root := Node3D.new()
 	root.name = "WoodenCabin"
 	var wall_mat := make_textured_material(TEX_WOOD_PLANKS, Color(0.88, 0.85, 0.92), 0.88, Vector3(0.65, 0.65, 0.65), true)
@@ -327,7 +566,6 @@ static func create_wooden_cabin(scale_factor: float = 1.0) -> Node3D:
 
 
 static func create_luminous_waterfall(height: float = 3.8, width: float = 0.85) -> Node3D:
-	## Restrained cascading turquoise water ribbon hanging from an island edge.
 	var root := Node3D.new()
 	root.name = "LuminousWaterfall"
 	var mat := StandardMaterial3D.new()
@@ -437,7 +675,7 @@ static func create_crystal_cluster(color: Color = Color(0.24, 0.78, 0.94)) -> No
 	return root
 
 
-static func create_rock(color: Color, scale_factor: float = 1.0) -> MeshInstance3D:
+static func create_rock(color: Color, scale_factor: float = 1.0, world_index: int = 1) -> MeshInstance3D:
 	var rock := MeshInstance3D.new()
 	rock.name = "LowPolyRock"
 	var sphere := SphereMesh.new()
@@ -447,13 +685,11 @@ static func create_rock(color: Color, scale_factor: float = 1.0) -> MeshInstance
 	sphere.rings = 2
 	rock.mesh = sphere
 	rock.position = Vector3(0.0, 0.18 * scale_factor, 0.0)
-	rock.material_override = make_textured_material(TEX_CLIFF_ROCK, Color.WHITE.lerp(color, 0.35), 0.90, Vector3(0.6, 0.6, 0.6), true)
+	rock.material_override = make_textured_material(get_world_cliff_texture_path(world_index), Color.WHITE.lerp(color, 0.30), 0.90, Vector3(0.6, 0.6, 0.6), true)
 	return rock
 
 
 static func build_hooded_character(is_ghost: bool = false, skin_id: String = "wanderer") -> Node3D:
-	## Preserves the approved hooded protagonist silhouette, proportions, glowing eyes, and lantern,
-	## while applying optional crystal-unlocked cloak & lantern themes.
 	var rig := Node3D.new()
 	rig.name = "CharacterRig"
 
@@ -574,9 +810,9 @@ static func create_grass_tuft(color: Color = Color(0.20, 0.42, 0.34)) -> Node3D:
 	return root
 
 
-static func create_scenic_arch(stone_color: Color, glow_color: Color) -> Node3D:
+static func create_scenic_arch(stone_color: Color, glow_color: Color, world_index: int = 1) -> Node3D:
 	var root := Node3D.new()
-	var s_mat := make_textured_material(TEX_CLIFF_ROCK, Color.WHITE.lerp(stone_color, 0.35), 0.86, Vector3(0.45, 0.45, 0.45), true)
+	var s_mat := make_textured_material(get_world_cliff_texture_path(world_index), Color.WHITE.lerp(stone_color, 0.30), 0.86, Vector3(0.45, 0.45, 0.45), true)
 	var g_mat := make_flat_material(glow_color, 0.2, glow_color, 1.35)
 	for sx in [-1.05, 1.05]:
 		var col := MeshInstance3D.new()
@@ -654,7 +890,6 @@ static func create_celestial_ring(radius: float, color: Color) -> MeshInstance3D
 
 
 static func create_hanging_vines(color: Color = Color(0.18, 0.44, 0.36), count: int = 4) -> Node3D:
-	## Lush hanging moss & vine strands draping over floating island cliff edges (matching 254211.png).
 	var root := Node3D.new()
 	root.name = "HangingVines"
 	var mat := make_flat_material(color, 0.85, color.lightened(0.2), 0.12)

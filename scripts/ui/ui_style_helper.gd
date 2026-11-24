@@ -2,6 +2,7 @@ class_name UIStyleHelper
 extends RefCounted
 
 ## Frosted-glass dark-indigo UI style matching the reference visual aesthetic.
+## V26: Strips Godot's default white rectangular focus box on Android touch buttons.
 
 const BG_PANEL := Color(0.10, 0.11, 0.24, 0.76)
 const BG_BUTTON := Color(0.16, 0.16, 0.34, 0.62)
@@ -30,9 +31,11 @@ static func make_panel_style(bg: Color = BG_PANEL, border: Color = BORDER_SUBTLE
 
 
 static func style_button(btn: Button, accent: Color = BORDER_SUBTLE, radius: int = 16, font_size: int = 19) -> void:
+	btn.focus_mode = Control.FOCUS_NONE
 	btn.add_theme_stylebox_override("normal", make_panel_style(BG_BUTTON, accent, radius, 2))
 	btn.add_theme_stylebox_override("hover", make_panel_style(BG_BUTTON_HOVER, accent.lightened(0.2), radius, 2))
 	btn.add_theme_stylebox_override("pressed", make_panel_style(BG_BUTTON_PRESSED, ACCENT_GOLD, radius, 2))
+	btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	btn.add_theme_stylebox_override("disabled", make_panel_style(Color(0.10, 0.10, 0.18, 0.42), Color(0.45, 0.46, 0.62, 0.22), radius, 1))
 	btn.add_theme_color_override("font_color", TEXT_PRIMARY)
 	btn.add_theme_color_override("font_hover_color", ACCENT_GOLD)

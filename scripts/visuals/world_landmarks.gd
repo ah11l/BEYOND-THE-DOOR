@@ -2,12 +2,12 @@ class_name WorldLandmarks
 extends Node3D
 
 ## Builds visually distinct, animated giant 3D architectural landmarks for each of the 6 worlds:
-## - World 1 (Forgotten Islands): Towering broken ruin archways & drifting monoliths
-## - World 2 (Whispering Forest): Colossal glowing spirit trees & animated cyan firefly swarm
-## - World 3 (City of Stopped Clocks): Giant rotating clockwork gears & bronze pendulums
-## - World 4 (The Silent Abyss): Abyssal obsidian spires & rising dark-teal energy columns
-## - World 5 (Sea of Mirrors): Floating rotating crystal mirror monoliths & drifting glass shards
-## - World 6 (Beyond the Door): Giant orbiting golden astral rings & Architect's sky sanctuary
+## - World 1 (Forgotten Islands): Towering broken ruin archways & drifting rune obelisks
+## - World 2 (Whispering Forest): Colossal glowing emerald spirit pines & animated firefly swarm
+## - World 3 (City of Stopped Clocks): Giant rotating antique-bronze clockwork gears
+## - World 4 (The Silent Abyss): Abyssal obsidian spires & rising luminous teal energy columns
+## - World 5 (Sea of Mirrors): Floating gleaming silver-crystal mirror monoliths & drifting glass shards
+## - World 6 (Beyond the Door): Giant orbiting golden astral rings & sunlit marble sanctuary pillars
 
 @export var world_index: int = 1
 @export var arena_center: Vector3 = Vector3.ZERO
@@ -42,8 +42,7 @@ func build_for_world(w_idx: int, center: Vector3, span: float) -> void:
 
 
 func _build_world_1_ruins() -> void:
-	## Colossal broken ancient ruin archway framing the horizon + drifting stone obelisks
-	var stone_mat := LowPolyMeshLibrary.make_textured_material(LowPolyMeshLibrary.TEX_CLIFF_ROCK, Color(0.75, 0.72, 0.90), 0.88, Vector3(0.22, 0.22, 0.22), true)
+	var stone_mat := LowPolyMeshLibrary.make_textured_material(LowPolyMeshLibrary.get_world_cliff_texture_path(1), Color(0.84, 0.86, 0.96), 0.88, Vector3(0.22, 0.22, 0.22), true)
 	var rune_mat := LowPolyMeshLibrary.make_flat_material(Color(0.28, 0.86, 1.0), 0.2, Color(0.24, 0.84, 1.0), 1.4)
 	var r := arena_span * 0.72 + 7.5
 
@@ -89,16 +88,14 @@ func _build_world_1_ruins() -> void:
 
 
 func _build_world_2_whispering_forest() -> void:
-	## Colossal distant glowing spirit trees + animated floating cyan firefly swarm
 	var r := arena_span * 0.70 + 8.0
 	for i in range(5):
 		var ang := float(i) * (TAU / 5.0) - 0.6
-		var tr := LowPolyMeshLibrary.create_low_poly_tree(Color(0.20, 0.60, 0.70), 3.4, (i % 2 == 0))
+		var tr := LowPolyMeshLibrary.create_low_poly_tree(Color(0.11, 0.42, 0.30), 3.3, true, 2)
 		tr.position = Vector3(cos(ang) * r, -4.5, sin(ang) * r)
 		add_child(tr)
 
-	# Animated cyan fireflies hovering across the stage
-	var count := 28
+	var count := 32
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	var sph := SphereMesh.new()
@@ -116,14 +113,14 @@ func _build_world_2_whispering_forest() -> void:
 		mm.set_instance_transform(i, Transform3D(Basis.IDENTITY, p))
 	_fireflies = MultiMeshInstance3D.new()
 	_fireflies.multimesh = mm
-	_fireflies.material_override = LowPolyMeshLibrary.make_flat_material(Color(0.45, 0.96, 1.0), 0.1, Color(0.32, 0.94, 1.0), 2.4)
+	_fireflies.material_override = LowPolyMeshLibrary.make_flat_material(Color(0.42, 0.98, 0.88), 0.1, Color(0.32, 0.96, 0.84), 2.4)
 	add_child(_fireflies)
 
 
 func _build_world_3_clockwork_city() -> void:
-	## Giant rotating clockwork gears & bronze rims in the twilight sky
-	var bronze_mat := LowPolyMeshLibrary.make_flat_material(Color(0.56, 0.42, 0.28), 0.55)
-	var glow_mat := LowPolyMeshLibrary.make_flat_material(Color(0.76, 0.46, 0.96), 0.2, Color(0.76, 0.46, 0.96), 1.4)
+	var bronze_mat := LowPolyMeshLibrary.make_flat_material(Color(0.74, 0.56, 0.30), 0.38, Color(0.76, 0.54, 0.24), 0.28)
+	bronze_mat.metallic = 0.55
+	var glow_mat := LowPolyMeshLibrary.make_flat_material(Color(1.0, 0.80, 0.38), 0.2, Color(1.0, 0.78, 0.32), 1.55)
 	var r := arena_span * 0.68 + 8.5
 
 	var gear_specs := [
@@ -147,7 +144,6 @@ func _build_world_3_clockwork_city() -> void:
 		ring.material_override = bronze_mat
 		gear.add_child(ring)
 
-		# Gear teeth & inner spokes
 		for t_i in range(8):
 			var a := float(t_i) * (TAU / 8.0)
 			var tooth := MeshInstance3D.new()
@@ -172,13 +168,12 @@ func _build_world_3_clockwork_city() -> void:
 
 
 func _build_world_4_silent_abyss() -> void:
-	## Tall obsidian abyssal needles & rising luminous teal energy columns
-	var obs_mat := LowPolyMeshLibrary.make_flat_material(Color(0.09, 0.11, 0.19), 0.72)
+	var obs_mat := LowPolyMeshLibrary.make_textured_material(LowPolyMeshLibrary.get_world_cliff_texture_path(4), Color(0.75, 0.85, 0.92), 0.74, Vector3(0.25, 0.25, 0.25), true)
 	var beam_mat := StandardMaterial3D.new()
-	beam_mat.albedo_color = Color(0.18, 0.68, 0.76, 0.24)
+	beam_mat.albedo_color = Color(0.18, 0.78, 0.84, 0.22)
 	beam_mat.emission_enabled = true
-	beam_mat.emission = Color(0.16, 0.66, 0.78)
-	beam_mat.emission_energy_multiplier = 1.1
+	beam_mat.emission = Color(0.16, 0.78, 0.86)
+	beam_mat.emission_energy_multiplier = 1.25
 	beam_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	var r := arena_span * 0.68 + 8.0
 
@@ -213,9 +208,11 @@ func _build_world_4_silent_abyss() -> void:
 
 
 func _build_world_5_sea_of_mirrors() -> void:
-	## Giant floating reflective/luminous crystal mirror slabs orbiting slowly around the arena
-	var frame_mat := LowPolyMeshLibrary.make_flat_material(Color(0.24, 0.18, 0.34), 0.65)
-	var mirror_mat := LowPolyMeshLibrary.make_flat_material(Color(0.58, 0.82, 0.98), 0.08, Color(0.45, 0.72, 0.96), 0.85)
+	var frame_mat := LowPolyMeshLibrary.make_flat_material(Color(0.56, 0.64, 0.84), 0.32)
+	frame_mat.metallic = 0.55
+	var mirror_mat := LowPolyMeshLibrary.make_flat_material(Color(0.76, 0.88, 1.0), 0.06, Color(0.52, 0.74, 0.98), 0.75)
+	mirror_mat.metallic = 0.80
+	var shard_mat := LowPolyMeshLibrary.make_flat_material(Color(0.74, 0.90, 1.0), 0.14, Color(0.62, 0.84, 1.0), 1.15)
 	var r := arena_span * 0.66 + 7.5
 
 	for i in range(6):
@@ -238,14 +235,26 @@ func _build_world_5_sea_of_mirrors() -> void:
 		glass.material_override = mirror_mat
 		slab.add_child(glass)
 
+		# Drifting crystal shard next to each mirror
+		var shard := MeshInstance3D.new()
+		var sc := CylinderMesh.new()
+		sc.top_radius = 0.02
+		sc.bottom_radius = 0.24
+		sc.height = 2.4
+		sc.radial_segments = 4
+		shard.mesh = sc
+		shard.position = Vector3(2.4, -1.2, 0.6)
+		shard.material_override = shard_mat
+		slab.add_child(shard)
+
 		add_child(slab)
 		_floaters.append(slab)
 
 
 func _build_world_6_beyond_the_door() -> void:
-	## Colossal orbiting golden astral rings & Architect's sky sanctuary pillars
-	var gold_mat := LowPolyMeshLibrary.make_flat_material(Color(0.95, 0.78, 0.36), 0.22, Color(0.95, 0.74, 0.30), 1.35)
-	var cyan_mat := LowPolyMeshLibrary.make_flat_material(Color(0.30, 0.88, 1.0), 0.20, Color(0.26, 0.84, 1.0), 1.45)
+	var gold_mat := LowPolyMeshLibrary.make_flat_material(Color(0.98, 0.80, 0.38), 0.20, Color(0.98, 0.76, 0.30), 1.35)
+	gold_mat.metallic = 0.65
+	var marble_mat := LowPolyMeshLibrary.make_textured_material(LowPolyMeshLibrary.get_world_cliff_texture_path(6), Color(1.0, 0.96, 0.90), 0.62, Vector3(0.28, 0.28, 0.28), true)
 
 	var ring_r := arena_span * 0.75 + 9.0
 	for idx in range(2):
@@ -254,15 +263,38 @@ func _build_world_6_beyond_the_door() -> void:
 		holder.rotation_degrees = Vector3(26.0 if idx == 0 else -32.0, 0.0, 18.0 if idx == 0 else -22.0)
 		var m := MeshInstance3D.new()
 		var t := TorusMesh.new()
-		t.inner_radius = ring_r + float(idx) * 3.5 - 0.25
-		t.outer_radius = ring_r + float(idx) * 3.5 + 0.25
+		t.inner_radius = ring_r + float(idx) * 3.5 - 0.28
+		t.outer_radius = ring_r + float(idx) * 3.5 + 0.28
 		t.rings = 40
 		t.ring_segments = 6
 		m.mesh = t
-		m.material_override = gold_mat if idx == 0 else cyan_mat
+		m.material_override = gold_mat
 		holder.add_child(m)
 		add_child(holder)
 		_spinners.append(holder)
+
+	# Sunlit celestial sanctuary pillars around the horizon
+	var pr := arena_span * 0.70 + 8.0
+	for i in range(4):
+		var ang := float(i) * (TAU / 4.0) + 0.75
+		var pil := Node3D.new()
+		pil.position = Vector3(cos(ang) * pr, -4.0, sin(ang) * pr)
+		var col := MeshInstance3D.new()
+		var b := BoxMesh.new()
+		b.size = Vector3(1.5, 16.0, 1.5)
+		col.mesh = b
+		col.position.y = 8.0
+		col.material_override = marble_mat
+		pil.add_child(col)
+		var band := MeshInstance3D.new()
+		var gb := BoxMesh.new()
+		gb.size = Vector3(1.65, 0.45, 1.65)
+		band.mesh = gb
+		band.position.y = 11.5
+		band.material_override = gold_mat
+		pil.add_child(band)
+		add_child(pil)
+		_floaters.append(pil)
 
 
 func _process(delta: float) -> void:

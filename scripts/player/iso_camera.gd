@@ -1,10 +1,10 @@
 class_name IsoCameraRig
 extends Node3D
 
-## Dramatic, intelligent dynamic camera rig aligned with 254211.png:
-## - Closer, lower heroic 3/4 perspective (8.6, 7.6, 8.6, FOV 38) so character, lantern & cliffs shine
-## - Smooth velocity lookahead + subtle adaptive corner yaw (±6 deg) without breaking joystick direction
-## - Automatic wide framing when crossing bridges, climbing gravity lifts, or starting a stage
+## Dramatic, intelligent dynamic camera rig:
+## - Closer, lower heroic 3/4 perspective (8.6, 7.6, 8.6, FOV 38)
+## - Smooth velocity lookahead + subtle adaptive corner yaw (±6 deg)
+## - Automatic wide framing when starting a stage + subtle suspense camera shake
 ## - Layer-32 prop occlusion fade + 3D cinematic shot support
 
 @export var follow_speed: float = 5.4
@@ -23,9 +23,14 @@ var _dynamic_yaw: float = 0.0
 var _stage_center: Vector3 = Vector3.ZERO
 var _stage_span: float = 12.0
 var _occluded_nodes: Array[Node3D] = []
+var _shake_strength: float = 0.0
+var _shake_time: float = 0.0
+var _shake_duration: float = 0.01
+var _shake_rng := RandomNumberGenerator.new()
 
 
 func _ready() -> void:
+	_shake_rng.randomize()
 	_current_offset = base_offset
 	camera = Camera3D.new()
 	camera.name = "IsoCamera3D"
@@ -36,6 +41,12 @@ func _ready() -> void:
 	add_child(camera)
 	camera.position = _current_offset
 	camera.look_at(look_offset, Vector3.UP)
+
+
+func trigger_shake(strength: float = 0.20, duration: float = 0.65) -> void:
+	_shake_strength = maxf(_shake_strength, strength)
+	_shake_duration = maxf(duration, 0.05)
+	_shake_time = _shake_duration
 
 
 func set_target(node: Node3D, snap: bool = true) -> void:
@@ -121,17 +132,14 @@ func _physics_process(delta: float) -> void:
 		target_vel = (target as CharacterBody3D).velocity
 	var horiz_vel := Vector3(target_vel.x, 0.0, target_vel.z)
 
-	# Generous velocity lookahead so edges, bridges, and corners open up clearly ahead of you
 	var desired_lookahead := horiz_vel * 0.46
 	if desired_lookahead.length() > 3.0:
 		desired_lookahead = desired_lookahead.normalized() * 3.0
 	_lookahead = _lookahead.lerp(desired_lookahead, minf(1.0, 3.6 * delta))
 
-	# Subtle corner/lateral yaw breathing (±6 deg max — feels dynamic without confusing joystick!)
 	var target_yaw := clampf((target.global_position.x - _stage_center.x) * 0.008, -0.11, 0.11)
 	_dynamic_yaw = lerpf(_dynamic_yaw, target_yaw, minf(1.0, 2.2 * delta))
 
-	# Dynamic zoom on fast movement, airborne jumps, or elevated islands
 	var speed_ratio := clampf(horiz_vel.length() / 5.8, 0.0, 1.0)
 	var elev_boost := clampf(target.global_position.y * 0.045, 0.0, 0.28)
 	var air_boost := 0.08 if (target is CharacterBody3D and not (target as CharacterBody3D).is_on_floor()) else 0.0
@@ -144,9 +152,23 @@ func _physics_process(delta: float) -> void:
 	var rotated_base := base_offset.rotated(Vector3.UP, _dynamic_yaw)
 	var target_offset := rotated_base * _desired_zoom
 	_current_offset = _current_offset.lerp(target_offset, minf(1.0, 3.0 * delta))
+
+	var shake_off := Vector3.ZERO
+	if _shake_time > 0.0:
+		_shake_time = maxf(0.0, _shake_time - delta)
+		var decay := _shake_time / _shake_duration
+		var amp := _shake_strength * decay
+		shake_off = Vector3(
+			_shake_rng.randf_range(-amp, amp),
+			_shake_rng.randf_range(-amp * 0.6, amp * 0.6),
+			_shake_rng.randf_range(-amp, amp)
+		)
+		if _shake_time <= 0.0:
+			_shake_strength = 0.0
+
 	if camera != null:
-		camera.position = _current_offset
-		camera.look_at(global_position + look_offset, Vector3.UP)
+		camera.position = _current_offset + shake_off
+		camera.look_at(global_position + look_offset + shake_off * 0.35, Vector3.UP)
 
 	_update_occlusion_fade()
 

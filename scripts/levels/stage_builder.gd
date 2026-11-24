@@ -21,6 +21,7 @@ var _hud: GameHUD
 var _boss: GuardianBoss = null
 var _cinematic_director: CinematicDirector = null
 var _landmarks: WorldLandmarks = null
+var _suspense_director: StageSuspenseDirector = null
 
 var _golden_door: GoldenDoor = null
 var _purple_doors: Array[PurpleDoor] = []
@@ -74,6 +75,12 @@ func _ready() -> void:
 	_cinematic_director.name = "CinematicDirector"
 	add_child(_cinematic_director)
 
+	_suspense_director = StageSuspenseDirector.new()
+	_suspense_director.name = "StageSuspenseDirector"
+	_world_root.add_child(_suspense_director)
+	var goal_pt: Vector3 = _golden_door.position if _golden_door != null else _stage_center
+	_suspense_director.setup(stage_id, int(stage_def.get("world", 1)), _player, _camera_rig, _hud, goal_pt, _stage_center)
+
 	# Trigger real 3D in-engine cinematics (Opening, 6 World Intros, 6 Mid-World Echo/Guardian Scenes, Boss Entrances)
 	_trigger_stage_cinematic_if_any()
 
@@ -86,7 +93,8 @@ func _on_settings_changed() -> void:
 func _setup_environment() -> void:
 	var env := Environment.new()
 	env.background_mode = Environment.BG_SKY
-	env.sky = LowPolyMeshLibrary.build_cosmic_sky()
+	var w_idx: int = int(stage_def.get("world", 1))
+	env.sky = LowPolyMeshLibrary.build_cosmic_sky(w_idx)
 	env.background_energy_multiplier = 1.05
 
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
@@ -114,14 +122,14 @@ func _setup_environment() -> void:
 	add_child(moon)
 
 	var rose_fill := DirectionalLight3D.new()
-	rose_fill.light_color = Color(0.76, 0.42, 0.58)
+	rose_fill.light_color = world_palette.get("fill_warm", Color(0.76, 0.52, 0.58)) as Color
 	rose_fill.light_energy = 0.32
 	rose_fill.rotation_degrees = Vector3(-22.0, -135.0, 0.0)
 	rose_fill.shadow_enabled = false
 	add_child(rose_fill)
 
 	var blue_rim := DirectionalLight3D.new()
-	blue_rim.light_color = Color(0.28, 0.66, 0.88)
+	blue_rim.light_color = world_palette.get("rim_cool", Color(0.28, 0.66, 0.88)) as Color
 	blue_rim.light_energy = 0.38
 	blue_rim.rotation_degrees = Vector3(-30.0, 125.0, 0.0)
 	blue_rim.shadow_enabled = false
@@ -135,6 +143,7 @@ func _build_stage_geometry() -> void:
 	var side_col: Color = world_palette["side"]
 	var accent_col: Color = world_palette["accent"]
 	var accent_alt: Color = world_palette.get("accent_alt", accent_col.darkened(0.2))
+	var w_idx: int = int(stage_def.get("world", 1))
 
 	var min_pt := Vector3(9999.0, 9999.0, 9999.0)
 	var max_pt := Vector3(-9999.0, -9999.0, -9999.0)
@@ -164,7 +173,7 @@ func _build_stage_geometry() -> void:
 		body.position = pos
 
 		var mesh_inst := MeshInstance3D.new()
-		mesh_inst.mesh = LowPolyMeshLibrary.create_floating_island_mesh(sz, t_col, side_col, stage_id * 31 + idx, g_col)
+		mesh_inst.mesh = LowPolyMeshLibrary.create_floating_island_mesh(sz, t_col, side_col, stage_id * 31 + idx, g_col, w_idx)
 		body.add_child(mesh_inst)
 
 		# Accurate playable surface collider (slight 0.08m inset prevents walking on thin air at beveled edge)
@@ -226,7 +235,7 @@ func _build_stage_geometry() -> void:
 		var dist := rng.randf_range(18.0, 29.0)
 		var deco := MeshInstance3D.new()
 		var d_sz := Vector3(rng.randf_range(2.0, 3.6), rng.randf_range(2.4, 4.4), rng.randf_range(2.0, 3.6))
-		deco.mesh = LowPolyMeshLibrary.create_floating_island_mesh(d_sz, top_col.darkened(0.32), side_col.darkened(0.28), stage_id * 7 + i, grass_col.darkened(0.30))
+		deco.mesh = LowPolyMeshLibrary.create_floating_island_mesh(d_sz, top_col.darkened(0.32), side_col.darkened(0.28), stage_id * 7 + i, grass_col.darkened(0.30), w_idx)
 		deco.position = _stage_center + Vector3(cos(angle) * dist, rng.randf_range(-5.5, 2.5), sin(angle) * dist)
 		_world_root.add_child(deco)
 
@@ -240,7 +249,7 @@ func _build_stage_geometry() -> void:
 			"tree":
 				var use_pine := (prop_idx % 3 == 1)
 				var t_col := accent_col if (prop_idx % 2 == 0) else accent_alt
-				node = LowPolyMeshLibrary.create_low_poly_tree(t_col, float(prop.get("scale", 1.0)), use_pine)
+				node = LowPolyMeshLibrary.create_low_poly_tree(t_col, float(prop.get("scale", 1.0)), use_pine, w_idx)
 			"cabin":
 				node = LowPolyMeshLibrary.create_wooden_cabin(float(prop.get("scale", 0.85)))
 			"bench":
@@ -250,9 +259,9 @@ func _build_stage_geometry() -> void:
 			"crystal":
 				node = LowPolyMeshLibrary.create_crystal_cluster(Color(0.24, 0.78, 0.94))
 			"rock":
-				node = LowPolyMeshLibrary.create_rock(side_col.lightened(0.15), float(prop.get("scale", 1.0)))
+				node = LowPolyMeshLibrary.create_rock(side_col.lightened(0.15), float(prop.get("scale", 1.0)), w_idx)
 			"arch":
-				node = LowPolyMeshLibrary.create_scenic_arch(side_col.lightened(0.22), accent_col)
+				node = LowPolyMeshLibrary.create_scenic_arch(side_col.lightened(0.22), world_palette.get("rune_glow", accent_col) as Color, w_idx)
 			"spire":
 				node = LowPolyMeshLibrary.create_crystal_spire(accent_col)
 			"monolith", "shrine":
@@ -278,6 +287,7 @@ func _build_stage_geometry() -> void:
 	for pl in stage_def.get("plates", []):
 		var plate := PressurePlate.new()
 		plate.plate_id = str(pl["id"])
+		plate.world_index = w_idx
 		plate.position = _to_vec3(pl["pos"])
 		plate.accept_player = bool(pl.get("accept_player", true))
 		plate.accept_echo = bool(pl.get("accept_echo", true))
@@ -290,6 +300,7 @@ func _build_stage_geometry() -> void:
 	# 7. Pushable Blocks
 	for blk in stage_def.get("blocks", []):
 		var pb := PushableBlock.new()
+		pb.world_index = w_idx
 		pb.position = _to_vec3(blk["pos"])
 		_world_root.add_child(pb)
 		_pushable_blocks.append(pb)
@@ -308,6 +319,7 @@ func _build_stage_geometry() -> void:
 	for cp in stage_def.get("checkpoints", []):
 		var pad := CheckpointPad.new()
 		pad.checkpoint_id = str(cp["id"])
+		pad.world_index = w_idx
 		pad.position = _to_vec3(cp["pos"])
 		pad.checkpoint_reached.connect(_on_checkpoint_reached)
 		_world_root.add_child(pad)
@@ -794,6 +806,8 @@ func _auto_dress_lush_islands() -> void:
 	var grass_col: Color = world_palette.get("grass", Color(0.20, 0.38, 0.34))
 	var accent_a: Color = world_palette.get("accent", Color(0.56, 0.24, 0.48))
 	var accent_b: Color = world_palette.get("accent_alt", Color(0.22, 0.38, 0.56))
+	var w_idx: int = int(stage_def.get("world", 1))
+	var rune_col: Color = world_palette.get("rune_glow", Color(0.24, 0.82, 0.96))
 
 	# Collect all gameplay-critical XZ points to keep 100% clear
 	var keep_clear: Array[Vector3] = [_to_vec3(stage_def.get("spawn", [0.0, 0.0, 0.0]))]
@@ -874,13 +888,13 @@ func _auto_dress_lush_islands() -> void:
 			keep_clear.append(back_right)
 
 		if sz.x >= 4.4 and is_clear.call(back_left, 1.85):
-			var tr := LowPolyMeshLibrary.create_low_poly_tree(accent_a if (idx % 2 == 0) else accent_b, rng.randf_range(0.95, 1.22), (idx % 2 == 1))
+			var tr := LowPolyMeshLibrary.create_low_poly_tree(accent_a if (idx % 2 == 0) else accent_b, rng.randf_range(0.95, 1.22), (idx % 2 == 1), w_idx)
 			tr.position = back_left
 			_world_root.add_child(tr)
 			keep_clear.append(back_left)
 
 		if sz.x >= 4.2 and is_clear.call(front_left, 1.70):
-			var cr := LowPolyMeshLibrary.create_crystal_cluster(Color(0.24, 0.82, 0.96))
+			var cr := LowPolyMeshLibrary.create_crystal_cluster(rune_col)
 			cr.position = front_left
 			cr.scale = Vector3(0.75, 0.75, 0.75)
 			_world_root.add_child(cr)

@@ -1,9 +1,10 @@
 class_name PushableBlock
 extends CharacterBody3D
 
-## Movable low-poly rune cube that the player can push onto pressure plates.
+## Carved ancient rune-stone pushable cube that adapts its glowing runes to each of the 6 worlds.
 
 @export var push_speed: float = 2.8
+@export var world_index: int = 1
 var initial_position: Vector3 = Vector3.ZERO
 var _push_velocity: Vector3 = Vector3.ZERO
 
@@ -25,18 +26,8 @@ func _ready() -> void:
 	m_box.size = Vector3(1.05, 1.05, 1.05)
 	mesh_inst.mesh = m_box
 	mesh_inst.position = Vector3(0.0, 0.525, 0.0)
-	mesh_inst.material_override = LowPolyMeshLibrary.make_flat_material(
-		Color(0.36, 0.30, 0.54), 0.72, Color(0.55, 0.42, 0.88), 0.35
-	)
+	mesh_inst.material_override = LowPolyMeshLibrary.make_rune_block_material(world_index)
 	add_child(mesh_inst)
-
-	var glyph := Label3D.new()
-	glyph.text = "■"
-	glyph.font_size = 56
-	glyph.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
-	glyph.position = Vector3(0.0, 1.07, 0.0)
-	glyph.modulate = Color(0.95, 0.86, 0.55)
-	add_child(glyph)
 
 
 func apply_push(dir: Vector3) -> void:
