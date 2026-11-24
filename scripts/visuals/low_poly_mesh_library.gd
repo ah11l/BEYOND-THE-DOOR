@@ -17,8 +17,8 @@ const WORLD_PALETTES := {
 		"top": Color(0.88, 0.94, 0.92),
 		"grass": Color(0.18, 0.46, 0.32),
 		"side": Color(0.84, 0.84, 0.94),
-		"accent": Color(0.16, 0.46, 0.30),      # Natural emerald canopy
-		"accent_alt": Color(0.12, 0.36, 0.28),  # Deep forest pine
+		"accent": Color(0.06, 0.24, 0.14),      # Deep rich emerald canopy
+		"accent_alt": Color(0.05, 0.19, 0.13),  # Deep forest pine
 		"blossom": Color(0.94, 0.58, 0.74),     # Subtle pink blossom highlights
 		"rune_glow": Color(0.32, 0.88, 1.0),
 		"sky_top": Color(0.03, 0.05, 0.12),
@@ -35,8 +35,8 @@ const WORLD_PALETTES := {
 		"top": Color(0.84, 0.96, 0.90),
 		"grass": Color(0.14, 0.44, 0.32),
 		"side": Color(0.78, 0.90, 0.88),
-		"accent": Color(0.11, 0.40, 0.28),      # Deep whispering pine
-		"accent_alt": Color(0.10, 0.34, 0.32),  # Mossy emerald-teal
+		"accent": Color(0.05, 0.22, 0.14),      # Deep whispering pine
+		"accent_alt": Color(0.04, 0.18, 0.16),  # Deep mossy pine
 		"blossom": Color(0.42, 0.96, 0.86),     # Bioluminescent mist glow
 		"rune_glow": Color(0.34, 0.96, 0.84),
 		"sky_top": Color(0.02, 0.06, 0.10),
@@ -53,8 +53,8 @@ const WORLD_PALETTES := {
 		"top": Color(0.92, 0.88, 0.94),
 		"grass": Color(0.24, 0.40, 0.26),
 		"side": Color(0.88, 0.82, 0.88),
-		"accent": Color(0.24, 0.42, 0.25),      # Olive-cypress green
-		"accent_alt": Color(0.18, 0.34, 0.24),  # Deep cypress
+		"accent": Color(0.12, 0.24, 0.13),      # Deep olive cypress
+		"accent_alt": Color(0.08, 0.18, 0.12),  # Deep cypress
 		"blossom": Color(0.94, 0.74, 0.36),     # Antique bronze-gold trim
 		"rune_glow": Color(0.98, 0.76, 0.34),
 		"sky_top": Color(0.06, 0.04, 0.12),
@@ -71,8 +71,8 @@ const WORLD_PALETTES := {
 		"top": Color(0.82, 0.92, 0.96),
 		"grass": Color(0.10, 0.32, 0.36),
 		"side": Color(0.74, 0.84, 0.92),
-		"accent": Color(0.09, 0.26, 0.32),      # Dark blue-green abyssal cypress
-		"accent_alt": Color(0.07, 0.20, 0.28),  # Deep obsidian pine
+		"accent": Color(0.05, 0.14, 0.18),      # Deep dark-teal abyssal cypress
+		"accent_alt": Color(0.04, 0.10, 0.15),  # Deep obsidian pine
 		"blossom": Color(0.76, 0.64, 0.98),     # Pale violet-pink crystal buds
 		"rune_glow": Color(0.24, 0.92, 0.96),
 		"sky_top": Color(0.015, 0.035, 0.06),
@@ -89,8 +89,8 @@ const WORLD_PALETTES := {
 		"top": Color(0.92, 0.94, 1.0),
 		"grass": Color(0.14, 0.42, 0.40),
 		"side": Color(0.88, 0.92, 1.0),
-		"accent": Color(0.12, 0.44, 0.38),      # Deep teal-emerald canopy
-		"accent_alt": Color(0.16, 0.48, 0.46),  # Silver-teal
+		"accent": Color(0.06, 0.23, 0.20),      # Deep teal-emerald canopy
+		"accent_alt": Color(0.08, 0.26, 0.24),  # Deep silver-teal
 		"blossom": Color(0.96, 0.64, 0.76),     # Delicate rose-pink blossoms
 		"rune_glow": Color(0.72, 0.78, 1.0),
 		"sky_top": Color(0.05, 0.04, 0.14),
@@ -107,8 +107,8 @@ const WORLD_PALETTES := {
 		"top": Color(1.0, 0.97, 0.92),
 		"grass": Color(0.14, 0.44, 0.28),
 		"side": Color(0.96, 0.90, 0.82),
-		"accent": Color(0.12, 0.42, 0.26),      # Majestic sanctuary emerald
-		"accent_alt": Color(0.16, 0.48, 0.30),  # Sunlit emerald
+		"accent": Color(0.05, 0.22, 0.13),      # Majestic deep sanctuary emerald
+		"accent_alt": Color(0.07, 0.26, 0.15),  # Deep sunlit emerald
 		"blossom": Color(0.98, 0.74, 0.56),     # Warm golden-pink sanctuary blossoms
 		"rune_glow": Color(1.0, 0.82, 0.36),
 		"sky_top": Color(0.05, 0.04, 0.11),
@@ -159,6 +159,7 @@ const PRELOAD_RUNE_ALBEDO: Texture2D = preload("res://assets/textures/rune_block
 const PRELOAD_RUNE_EMISSION: Texture2D = preload("res://assets/textures/rune_block_emission.png")
 const PRELOAD_RUNE_NORMAL: Texture2D = preload("res://assets/textures/rune_block_normal.png")
 const PRELOAD_WOOD_NORMAL: Texture2D = preload("res://assets/textures/wood_planks_normal.png")
+const PRELOAD_WORLD_SKY_SHADER: Shader = preload("res://assets/shaders/starry_world_sky.gdshader")
 
 
 static func get_world_top_texture_path(world_index: int) -> String:
@@ -239,44 +240,43 @@ static func make_rune_block_material(world_index: int = 1) -> StandardMaterial3D
 
 
 static func build_cosmic_sky(world_index: int = 1) -> Sky:
-	## 6 unmistakably distinct world skies (high-contrast horizon & atmosphere per world)
+	## V30 Starry Nebula & Atmospheric Mist Sky Shader tailored to all 6 worlds (crisp stars + clouds!)
 	var w := clampi(world_index, 1, 6)
 	var sky := Sky.new()
-	var psm := ProceduralSkyMaterial.new()
+	var smat := ShaderMaterial.new()
+	smat.shader = PRELOAD_WORLD_SKY_SHADER
 	match w:
-		1: # World 1: Starry Indigo-Navy Night (Forgotten Islands)
-			psm.sky_top_color = Color(0.03, 0.05, 0.15)
-			psm.sky_horizon_color = Color(0.14, 0.22, 0.44)
-			psm.ground_bottom_color = Color(0.02, 0.04, 0.10)
-			psm.ground_horizon_color = Color(0.10, 0.16, 0.34)
-		2: # World 2: Vivid Emerald-Teal Forest Mist (Whispering Forest)
-			psm.sky_top_color = Color(0.02, 0.14, 0.13)
-			psm.sky_horizon_color = Color(0.10, 0.46, 0.38)
-			psm.ground_bottom_color = Color(0.01, 0.08, 0.08)
-			psm.ground_horizon_color = Color(0.06, 0.32, 0.28)
-		3: # World 3: Warm Amber-Sunset & Twilight Violet (City of Stopped Clocks)
-			psm.sky_top_color = Color(0.16, 0.07, 0.22)
-			psm.sky_horizon_color = Color(0.76, 0.40, 0.20)
-			psm.ground_bottom_color = Color(0.10, 0.05, 0.14)
-			psm.ground_horizon_color = Color(0.52, 0.26, 0.16)
-		4: # World 4: Eerie Deep Black-Cyan Abyss (The Silent Abyss)
-			psm.sky_top_color = Color(0.01, 0.04, 0.07)
-			psm.sky_horizon_color = Color(0.05, 0.34, 0.42)
-			psm.ground_bottom_color = Color(0.01, 0.02, 0.04)
-			psm.ground_horizon_color = Color(0.03, 0.22, 0.28)
-		5: # World 5: Luminous Lavender & Silver-Indigo Nebula (Sea of Mirrors)
-			psm.sky_top_color = Color(0.12, 0.07, 0.28)
-			psm.sky_horizon_color = Color(0.48, 0.36, 0.78)
-			psm.ground_bottom_color = Color(0.08, 0.06, 0.20)
-			psm.ground_horizon_color = Color(0.34, 0.28, 0.62)
-		6: # World 6: Radiant Golden Sunrise Celestial Sanctuary (Beyond the Door)
-			psm.sky_top_color = Color(0.10, 0.07, 0.20)
-			psm.sky_horizon_color = Color(0.94, 0.62, 0.24)
-			psm.ground_bottom_color = Color(0.14, 0.09, 0.16)
-			psm.ground_horizon_color = Color(0.76, 0.48, 0.20)
-	psm.sky_curve = 0.28
-	psm.ground_curve = 0.22
-	sky.sky_material = psm
+		1: # World 1: Starry Indigo-Navy Night + soft blue mist (matching 255323.jpg)
+			smat.set_shader_parameter("sky_top", Color(0.018, 0.032, 0.095))
+			smat.set_shader_parameter("sky_horizon", Color(0.08, 0.14, 0.28))
+			smat.set_shader_parameter("nebula_color", Color(0.20, 0.32, 0.48))
+			smat.set_shader_parameter("nebula_strength", 0.48)
+		2: # World 2: Deep Twilight Forest + Emerald-Teal Mist Clouds + Stars
+			smat.set_shader_parameter("sky_top", Color(0.015, 0.055, 0.075))
+			smat.set_shader_parameter("sky_horizon", Color(0.05, 0.22, 0.20))
+			smat.set_shader_parameter("nebula_color", Color(0.14, 0.42, 0.36))
+			smat.set_shader_parameter("nebula_strength", 0.56)
+		3: # World 3: Warm Amber-Gold & Twilight Violet Clockwork Sky + Stars
+			smat.set_shader_parameter("sky_top", Color(0.08, 0.04, 0.14))
+			smat.set_shader_parameter("sky_horizon", Color(0.52, 0.26, 0.16))
+			smat.set_shader_parameter("nebula_color", Color(0.68, 0.42, 0.22))
+			smat.set_shader_parameter("nebula_strength", 0.52)
+		4: # World 4: Deep Midnight Abyss + Glowing Cyan Rift Mist + Stars
+			smat.set_shader_parameter("sky_top", Color(0.01, 0.025, 0.045))
+			smat.set_shader_parameter("sky_horizon", Color(0.03, 0.20, 0.26))
+			smat.set_shader_parameter("nebula_color", Color(0.10, 0.46, 0.52))
+			smat.set_shader_parameter("nebula_strength", 0.58)
+		5: # World 5: Luminous Violet-Lavender Nebula + Silver Stardust
+			smat.set_shader_parameter("sky_top", Color(0.05, 0.03, 0.14))
+			smat.set_shader_parameter("sky_horizon", Color(0.26, 0.18, 0.46))
+			smat.set_shader_parameter("nebula_color", Color(0.56, 0.36, 0.78))
+			smat.set_shader_parameter("nebula_strength", 0.62)
+		6: # World 6: Cosmic Starry Sanctuary + Radiant Golden Dawn Horizon
+			smat.set_shader_parameter("sky_top", Color(0.04, 0.03, 0.10))
+			smat.set_shader_parameter("sky_horizon", Color(0.76, 0.46, 0.16))
+			smat.set_shader_parameter("nebula_color", Color(0.95, 0.68, 0.28))
+			smat.set_shader_parameter("nebula_strength", 0.60)
+	sky.sky_material = smat
 	return sky
 
 
@@ -999,7 +999,7 @@ static func create_celestial_ring(radius: float, color: Color) -> MeshInstance3D
 static func create_hanging_vines(color: Color = Color(0.18, 0.44, 0.36), count: int = 4) -> Node3D:
 	var root := Node3D.new()
 	root.name = "HangingVines"
-	var mat := make_flat_material(color, 0.85, color.lightened(0.2), 0.12)
+	var mat := make_flat_material(Color(0.14, 0.34, 0.18), 0.88)
 	for i in range(count):
 		var strand := MeshInstance3D.new()
 		var cyl := CylinderMesh.new()

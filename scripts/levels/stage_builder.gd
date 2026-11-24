@@ -437,7 +437,7 @@ func _create_bridge_body(p_a: Vector3, p_b: Vector3, width: float, is_magic: boo
 
 	var mat: StandardMaterial3D
 	if is_magic:
-		mat = LowPolyMeshLibrary.make_flat_material(Color(0.24, 0.58, 0.78), 0.72, Color(0.22, 0.68, 0.88), 0.50)
+		mat = LowPolyMeshLibrary.make_flat_material(Color(0.16, 0.36, 0.52), 0.68, Color(0.18, 0.58, 0.78), 0.24)
 	else:
 		mat = LowPolyMeshLibrary.make_textured_material(LowPolyMeshLibrary.TEX_WOOD_PLANKS, Color(0.95, 0.92, 0.90), 0.84, Vector3(0.55, 0.55, 0.55), true)
 	var rail_mat := LowPolyMeshLibrary.make_flat_material(
@@ -902,10 +902,17 @@ func _auto_dress_lush_islands() -> void:
 			_world_root.add_child(tr)
 			keep_clear.append(back_left)
 
+		var front_right := pos + Vector3(hx * 0.74, 0.0, hz * 0.72)
+		if idx <= 1 and sz.x >= 4.6 and is_clear.call(front_right, 1.45):
+			var lan := LowPolyMeshLibrary.create_lantern_prop(Color(1.0, 0.78, 0.36), true)
+			lan.position = front_right
+			_world_root.add_child(lan)
+			keep_clear.append(front_right)
+
 		if sz.x >= 4.2 and is_clear.call(front_left, 1.70):
 			var cr := LowPolyMeshLibrary.create_crystal_cluster(rune_col)
 			cr.position = front_left
-			cr.scale = Vector3(0.75, 0.75, 0.75)
+			cr.scale = Vector3(0.72, 0.72, 0.72)
 			_world_root.add_child(cr)
 			keep_clear.append(front_left)
 
@@ -993,17 +1000,17 @@ func _apply_graphics_settings() -> void:
 		e.glow_enabled = bloom_on
 		match q:
 			"ultra":
-				e.glow_intensity = 0.72
-				e.glow_bloom = 0.32
-				e.glow_hdr_threshold = 0.85
+				e.glow_intensity = 0.45
+				e.glow_bloom = 0.16
+				e.glow_hdr_threshold = 1.12
 			"high":
-				e.glow_intensity = 0.52
-				e.glow_bloom = 0.22
-				e.glow_hdr_threshold = 0.92
-			_:
-				e.glow_intensity = 0.30
+				e.glow_intensity = 0.34
 				e.glow_bloom = 0.10
-				e.glow_hdr_threshold = 1.0
+				e.glow_hdr_threshold = 1.18
+			_:
+				e.glow_intensity = 0.22
+				e.glow_bloom = 0.06
+				e.glow_hdr_threshold = 1.25
 
 	var vp: Viewport = get_viewport()
 	if vp != null:

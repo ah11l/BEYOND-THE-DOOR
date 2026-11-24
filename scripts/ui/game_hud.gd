@@ -38,6 +38,9 @@ var _codex_overlay: Control
 var _stage_clear_overlay: Control
 var _tutorial_overlay: Control
 var _stage_clear_title: Label
+var _last_touch_jump_ms: int = 0
+var _last_touch_echo_ms: int = 0
+var _last_touch_interact_ms: int = 0
 var _toast_timer: float = 0.0
 
 var _current_stage_id: int = 1
@@ -418,7 +421,7 @@ func _build_hud() -> void:
 	_context_btn.text = ""
 	UIStyleHelper.style_circle_button(_context_btn, 76, UIStyleHelper.ACCENT_CYAN, 20)
 	UIStyleHelper.apply_icon(_context_btn, CONTEXT_ICONS["hand"], 34)
-	_context_btn.pressed.connect(func() -> void: GameState.emit_touch_interact())
+	_context_btn.pressed.connect(_trigger_interact_action)
 	controls_layer.add_child(_context_btn)
 
 	# Bottom-center toast pill only (NO permanent rectangular interact text bar!)
@@ -463,13 +466,13 @@ func _build_hud() -> void:
 	_echo_btn.text = ""
 	UIStyleHelper.style_circle_button(_echo_btn, 96, UIStyleHelper.ACCENT_CYAN, 18)
 	UIStyleHelper.apply_icon(_echo_btn, "res://assets/icons/icon_echo.svg", 38)
-	_echo_btn.pressed.connect(func() -> void: GameState.emit_touch_echo())
+	_echo_btn.pressed.connect(_trigger_echo_action)
 	right_controls.add_child(_echo_btn)
 
 	_jump_btn = Button.new()
 	_jump_btn.text = "▲"
 	UIStyleHelper.style_circle_button(_jump_btn, 106, UIStyleHelper.BORDER_SUBTLE, 30)
-	_jump_btn.pressed.connect(func() -> void: GameState.emit_touch_jump())
+	_jump_btn.pressed.connect(_trigger_jump_action)
 	right_controls.add_child(_jump_btn)
 
 	_build_pause_overlay()
@@ -1025,3 +1028,65 @@ func update_boss_bar(world_idx: int, remaining_seals: int, total_seals: int) -> 
 	var b_lbl := bar_panel.find_child("BossSealLabel", true, false) as Label
 	if b_lbl != null:
 		b_lbl.text = "%s — %s: %d / %d" % [LocalizationManager.t("boss_title_w%d" % clampi(world_idx, 1, 6)), LocalizationManager.t("boss_seals_label"), remaining_seals, total_seals]
+
+
+func _input(event: InputEvent) -> void:
+	if not (event is InputEventScreenTouch):
+		return
+	var ev := event as InputEventScreenTouch
+	if not ev.pressed:
+		return
+	if get_tree().paused:
+		return
+	if (_pause_overlay != null and _pause_overlay.visible) or (_settings_overlay != null and _settings_overlay.visible) or (_stage_select_overlay != null and _stage_select_overlay.visible) or (_codex_overlay != null and _codex_overlay.visible) or (_stage_clear_overlay != null and _stage_clear_overlay.visible) or (_tutorial_overlay != null and _tutorial_overlay.visible):
+		return
+
+	var pt: Vector2 = ev.position
+	if _jump_btn != null and _jump_btn.visible and _jump_btn.get_global_rect().grow(14.0).has_point(pt):
+		_trigger_jump_action()
+		_pulse_action_btn(_jump_btn)
+		get_viewport().set_input_as_handled()
+		return
+	if _echo_btn != null and _echo_btn.visible and _echo_btn.get_global_rect().grow(12.0).has_point(pt):
+		_trigger_echo_action()
+		_pulse_action_btn(_echo_btn)
+		get_viewport().set_input_as_handled()
+		return
+	if _context_btn != null and _context_btn.visible and _context_btn.get_global_rect().grow(14.0).has_point(pt):
+		_trigger_interact_action()
+		_pulse_action_btn(_context_btn)
+		get_viewport().set_input_as_handled()
+		return
+
+
+func _trigger_jump_action() -> void:
+	var now := Time.get_ticks_msec()
+	if now - _last_touch_jump_ms < 120:
+		return
+	_last_touch_jump_ms = now
+	GameState.emit_touch_jump()
+
+
+func _trigger_echo_action() -> void:
+	var now := Time.get_ticks_msec()
+	if now - _last_touch_echo_ms < 160:
+		return
+	_last_touch_echo_ms = now
+	GameState.emit_touch_echo()
+
+
+func _trigger_interact_action() -> void:
+	var now := Time.get_ticks_msec()
+	if now - _last_touch_interact_ms < 160:
+		return
+	_last_touch_interact_ms = now
+	GameState.emit_touch_interact()
+
+
+func _pulse_action_btn(btn: Button) -> void:
+	if btn == null or not is_instance_valid(btn):
+		return
+	btn.pivot_offset = btn.size * 0.5
+	var tw := create_tween()
+	tw.tween_property(btn, "scale", Vector2(0.88, 0.88), 0.06)
+	tw.tween_property(btn, "scale", Vector2.ONE, 0.10)

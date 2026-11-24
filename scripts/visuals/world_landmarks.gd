@@ -75,25 +75,33 @@ func _build_world_1_ruins() -> void:
 
 
 func _build_world_2_whispering_forest() -> void:
-	var d := arena_span * 0.45 + 4.8
+	## Distant rocky floating islets topped with deep-emerald pine trees + delicate tiny golden-cyan fireflies
+	var d := arena_span * 0.48 + 5.2
 	var spots: Array[Vector3] = [
-		Vector3(-d, -3.5, -d * 0.85),
-		Vector3(-d * 0.3, -4.0, -d * 1.05),
-		Vector3(d * 0.45, -3.5, -d * 0.95),
-		Vector3(-d * 1.05, -3.5, d * 0.25),
-		Vector3(-d * 0.7, -4.2, -d * 1.25),
+		Vector3(-d * 0.95, -1.2, -d * 0.85),
+		Vector3(-d * 0.20, -0.8, -d * 1.08),
+		Vector3(d * 0.55, -1.4, -d * 0.95),
+		Vector3(-d * 1.10, -1.0, d * 0.22),
 	]
-	for p: Vector3 in spots:
-		var tr := LowPolyMeshLibrary.create_low_poly_tree(Color(0.10, 0.44, 0.30), 2.8, true, 2)
-		tr.position = p
-		add_child(tr)
+	for i in range(spots.size()):
+		var p: Vector3 = spots[i]
+		var holder := Node3D.new()
+		holder.position = p
+		var islet := MeshInstance3D.new()
+		islet.mesh = LowPolyMeshLibrary.create_floating_island_mesh(Vector3(3.4, 2.4, 3.4), Color(0.84, 0.96, 0.90), Color(0.78, 0.90, 0.88), 200 + i, Color(0.14, 0.40, 0.28), 2)
+		holder.add_child(islet)
+		var tr := LowPolyMeshLibrary.create_low_poly_tree(Color(0.05, 0.22, 0.14), 1.45, true, 2)
+		tr.position = Vector3(0.0, 0.0, 0.0)
+		holder.add_child(tr)
+		add_child(holder)
+		_floaters.append(holder)
 
-	var count := 42
+	var count := 36
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	var sph := SphereMesh.new()
-	sph.radius = 0.085
-	sph.height = 0.17
+	sph.radius = 0.032
+	sph.height = 0.064
 	sph.radial_segments = 5
 	sph.rings = 3
 	mm.mesh = sph
@@ -101,12 +109,12 @@ func _build_world_2_whispering_forest() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 2026
 	for i in range(count):
-		var p := Vector3(rng.randf_range(-11.0, 11.0), rng.randf_range(0.6, 5.5), rng.randf_range(-11.0, 11.0))
+		var p := Vector3(rng.randf_range(-10.0, 10.0), rng.randf_range(0.5, 4.4), rng.randf_range(-10.0, 10.0))
 		_firefly_base.append(p)
 		mm.set_instance_transform(i, Transform3D(Basis.IDENTITY, p))
 	_fireflies = MultiMeshInstance3D.new()
 	_fireflies.multimesh = mm
-	_fireflies.material_override = LowPolyMeshLibrary.make_flat_material(Color(0.45, 1.0, 0.86), 0.1, Color(0.32, 0.98, 0.84), 2.6)
+	_fireflies.material_override = LowPolyMeshLibrary.make_flat_material(Color(0.65, 0.98, 0.88), 0.1, Color(0.45, 0.95, 0.84), 1.45)
 	add_child(_fireflies)
 
 

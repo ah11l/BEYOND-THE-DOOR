@@ -37,7 +37,7 @@ func _gui_input(event: InputEvent) -> void:
 		if ev.index == _touch_index:
 			_update_knob(ev.position)
 			accept_event()
-	elif event is InputEventMouseButton:
+	elif event is InputEventMouseButton and _touch_index == -1:
 		var ev := event as InputEventMouseButton
 		if ev.button_index == MOUSE_BUTTON_LEFT:
 			if ev.pressed:
